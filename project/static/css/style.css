@@ -153,6 +153,19 @@ h6,
     letter-spacing: -0.5px;
 }
 
+.brand-logo {
+    max-height: 45px;
+    width: auto;
+    object-fit: contain;
+    transition: max-height 0.3s ease;
+}
+
+@media (min-width: 992px) {
+    .brand-logo {
+        max-height: 80px;
+    }
+}
+
 .navbar-glass .nav-link {
     color: var(--text-color) !important;
     font-weight: 500;

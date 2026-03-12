@@ -43,8 +43,7 @@
       <!-- Brand -->
       <a class="navbar-brand me-1 me-lg-3 d-flex flex-column justify-content-center"
         href="{{ url_for('main.main_page') }}" style="line-height: 1;">
-        <img src="{{ url_for('static', filename='images/weblogo.png') }}" alt="Writer's Hub"
-          style="max-height: 90px; width: auto;">
+        <img src="{{ url_for('static', filename='images/weblogo.png') }}" alt="Writer's Hub" class="brand-logo">
         {% if current_user.is_authenticated %}
         <span class="d-none d-sm-block text-muted" style="font-size: 0.75rem; font-weight: normal; margin-top: 4px;">@{{
           current_user.username }}</span>
