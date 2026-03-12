@@ -166,7 +166,7 @@ def login_page():
             if not getattr(user, 'is_verified', True):
                 flash('Please check your email and click the verification link before logging in.', 'warning')
                 return redirect(url_for('main.login_page'))
-            login_user(user, remember=form.remember_me.data)
+            login_user(user, remember=True)
             next_page = request.args.get('next')
             if 'draft_post' in session:
                 return redirect(url_for('main.create_post'))
@@ -233,7 +233,7 @@ def google_authorize():
             db.session.commit()
         flash('Logged in via Google!', 'success')
 
-    login_user(user)
+    login_user(user, remember=True)
     if 'draft_post' in session:
         return redirect(url_for('main.create_post'))
     return redirect(url_for('main.main_page'))

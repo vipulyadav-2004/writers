@@ -9,7 +9,6 @@ from email_validator import validate_email as validate_email_mx, EmailNotValidEr
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()], filters=[lambda x: x.lower() if x else x])
     password = PasswordField('Password', validators=[DataRequired()])
-    remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
 
 class RegistrationForm(FlaskForm):
