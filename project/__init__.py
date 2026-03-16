@@ -80,9 +80,24 @@ def create_app():
     from project.routes import main
     app.register_blueprint(main)
 
-    # Note: We usually stop using db.create_all() once using Migrations
-    # but it doesn't hurt to keep it for the very first initialization.
     with app.app_context():
         db.create_all()
+        
+        # Automatic Migrations for Vercel Serverless environment
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            if 'comment' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('comment')]
+                if 'parent_id' not in columns:
+                    if db.engine.name == 'postgresql':
+                        db.session.execute(text("ALTER TABLE comment ADD COLUMN parent_id INTEGER REFERENCES comment(id) ON DELETE CASCADE;"))
+                    else:
+                        db.session.execute(text("ALTER TABLE comment ADD COLUMN parent_id INTEGER;"))
+                    db.session.commit()
+                    print("Successfully added parent_id to comment table.")
+        except Exception as e:
+            db.session.rollback()
+            print("Auto-migration error:", e)
     
     return app
