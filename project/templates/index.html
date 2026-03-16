@@ -362,6 +362,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // Prevent base.html's global loader from changing button text
+    const forms = document.querySelectorAll('form');
+    forms.forEach(f => {
+        const a = f.getAttribute('action');
+        if (a && (a.includes('/like') || a.includes('/save') || a.includes('/comment') || a.includes('/follow') || a.includes('/unfollow') || a.includes('/share_post'))) {
+            f.setAttribute('data-prevent-loader', 'true');
+        }
+    });
+
     document.body.addEventListener('submit', async (e) => {
         const form = e.target;
         const action = form.getAttribute('action');
@@ -371,6 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const formData = new FormData(form);
             const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Only disable briefly without text change
             if (submitBtn) submitBtn.disabled = true;
             
             try {
