@@ -161,15 +161,19 @@
                         </button>
                         <ul class="dropdown-menu shadow">
                             <li><button class="dropdown-item"
-                                    onclick="navigator.clipboard.writeText('{{ request.url_root }}user/{{ post.author.username }}#post-{{ post.id }}'); alert('Post URL copied to clipboard!');"><i
+                                    onclick="navigator.clipboard.writeText(`{{ url_for('main.user_posts', username=post.author.username, _external=True) }}#post-{{ post.id }}`); alert('Post URL copied to clipboard!');"><i
                                         class="bi bi-link-45deg me-2"></i>Copy Link</button></li>
                             {% if current_user.is_authenticated %}
                             <li><button class="dropdown-item" data-bs-toggle="modal"
-                                    data-bs-target="#shareModal{{ post.id }}"><i class="bi bi-send me-2"></i>Send in
-                                    Message</button></li>
+                                    data-bs-target="#shareModal{{ post.id }}"><i class="bi bi-send me-2"></i>Send in Message</button></li>
                             {% else %}
                             <li><a class="dropdown-item" href="{{ url_for('main.login_page') }}"><i class="bi bi-send me-2"></i>Send in Message</a></li>
                             {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="https://twitter.com/intent/tweet?text={{ post.title | urlencode }}&url={{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-twitter me-2" style="color: #1DA1F2;"></i>Twitter</a></li>
+                            <li><a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-facebook me-2" style="color: #1877F2;"></i>Facebook</a></li>
+                            <li><a class="dropdown-item" href="https://api.whatsapp.com/send?text={{ post.title | urlencode }}%20{{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-whatsapp me-2" style="color: #25D366;"></i>WhatsApp</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="navigator.clipboard.writeText(`{{ url_for('main.user_posts', username=post.author.username, _external=True) }}#post-{{ post.id }}`); alert('Link copied! Open Instagram to paste and share.'); window.open('https://instagram.com', '_blank');"><i class="bi bi-instagram me-2" style="color: #E1306C;"></i>Instagram</a></li>
                         </ul>
                     </div>
                 </div>
