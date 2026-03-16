@@ -357,8 +357,129 @@
             <a href="{{ url_for('main.create_post') }}" class="btn btn-auth mt-3">Create Post</a>
         </div>
         {% endif %}
-
-
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('submit', async (e) => {
+        const form = e.target;
+        const action = form.getAttribute('action');
+        if (!action) return;
+        
+        if (action.includes('/like') || action.includes('/save') || action.includes('/comment') || action.includes('/follow') || action.includes('/unfollow') || action.includes('/share_post')) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                
+                if (response.redirected && response.url.includes('/login')) {
+                    window.location.href = response.url;
+                    return;
+                }
+                
+                if (response.ok) {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            if (action.includes('/like')) {
+                                const icon = form.querySelector('i');
+                                const badge = form.querySelector('.badge');
+                                if (data.action === 'liked') {
+                                    icon.classList.remove('bi-heart');
+                                    icon.classList.add('bi-heart-fill', 'text-danger');
+                                } else {
+                                    icon.classList.remove('bi-heart-fill', 'text-danger');
+                                    icon.classList.add('bi-heart');
+                                }
+                                if (badge) badge.textContent = data.likes_count;
+                            } 
+                            else if (action.includes('/save')) {
+                                const icon = form.querySelector('i');
+                                if (data.action === 'saved') {
+                                    icon.classList.remove('bi-bookmark');
+                                    icon.classList.add('bi-bookmark-fill', 'text-warning');
+                                } else {
+                                    icon.classList.remove('bi-bookmark-fill', 'text-warning');
+                                    icon.classList.add('bi-bookmark');
+                                }
+                            } 
+                            else if (action.includes('/comment')) {
+                                const commentsList = form.closest('.collapse').querySelector('.comments-list');
+                                const commentHtml = `
+                                <div class="d-flex mb-3">
+                                    <img src="${data.comment.image_url}" class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
+                                    <div class="glass-card flex-grow-1 p-3 m-0" style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong>${data.comment.username}</strong>
+                                            <small class="text-muted">${data.comment.timestamp}</small>
+                                        </div>
+                                        <p class="mb-0 small text-white">${data.comment.body}</p>
+                                    </div>
+                                </div>`;
+                                const noComments = commentsList.querySelector('p.text-muted');
+                                if (noComments) noComments.remove();
+                                commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                                form.reset();
+                                
+                                const postCard = form.closest('.glass-card');
+                                const commentBtnBadge = postCard.querySelector('[data-bs-target^="#comments-"] .badge');
+                                if (commentBtnBadge) commentBtnBadge.textContent = data.comments_count;
+                            }
+                            else if (action.includes('/share_post')) {
+                                const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
+                                if (modal) modal.hide();
+                                form.reset();
+                            }
+                            else if (action.includes('/follow') || action.includes('/unfollow')) {
+                                if (data.action === 'followed') {
+                                    form.action = action.replace('/follow/', '/unfollow/');
+                                    const btn = form.querySelector('button');
+                                    btn.textContent = 'Unfollow';
+                                    if (btn.classList.contains('btn-auth')) {
+                                        btn.classList.replace('btn-auth', 'btn-secondary');
+                                    } else {
+                                        // Some buttons are different styled logic like the post badge
+                                        btn.textContent = 'Unfollow';
+                                    }
+                                } else {
+                                    form.action = action.replace('/unfollow/', '/follow/');
+                                    const btn = form.querySelector('button');
+                                    btn.textContent = 'Follow';
+                                    if (btn.classList.contains('btn-secondary')) {
+                                        btn.classList.replace('btn-secondary', 'btn-auth');
+                                    } else {
+                                        btn.textContent = 'Follow';
+                                    }
+                                }
+                            }
+                        } else {
+                            if (data.message) {
+                                alert(data.message);
+                            }
+                        }
+                    } else {
+                        // Response is not JSON, might be a redirect page load (if backend unhandled error)
+                        window.location.reload();
+                    }
+                } else {
+                    alert("Network error. Please try again.");
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

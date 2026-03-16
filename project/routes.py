@@ -350,6 +350,9 @@ def like_post(post_id):
             send_notification_email(post.author, 'New Like on Writer\'s Hub', f"{current_user.username} liked your post '{post.title}'.")
         db.session.commit()
         
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'unliked' if like else 'liked', 'likes_count': post.likes.count()})
+        
     return redirect(request.referrer or url_for('main.main_page'))
 
 @main.route('/post/<int:post_id>/comment', methods=['POST'])
@@ -366,8 +369,25 @@ def comment_post(post_id):
             db.session.add(notif)
             send_notification_email(post.author, 'New Comment on Writer\'s Hub', f"{current_user.username} commented on your post '{post.title}':\n\n\"{body.strip()}\"")
         db.session.commit()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            img_fn = current_user.image_file if current_user.image_file else 'default.jpg'
+            image_url = current_user.image_file if current_user.image_file and current_user.image_file.startswith('http') else url_for('static', filename='profile_pics/' + img_fn)
+            return jsonify({
+                'status': 'success',
+                'comment': {
+                    'username': current_user.username,
+                    'image_url': image_url,
+                    'body': comment.body,
+                    'timestamp': comment.timestamp.strftime('%b %d, %H:%M')
+                },
+                'comments_count': post.comments.count()
+            })
+            
         flash('Comment added successfully!', 'success')
     else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'Comment cannot be empty.'}), 400
         flash('Comment cannot be empty.', 'danger')
         
     return redirect(request.referrer or url_for('main.main_page'))
@@ -381,12 +401,19 @@ def save_post(post_id):
     if saved_post:
         db.session.delete(saved_post)
         db.session.commit()
-        flash('Post removed from saved posts.', 'info')
+        action_type = 'unsaved'
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            flash('Post removed from saved posts.', 'info')
     else:
         new_save = SavedPost(user_id=current_user.id, post_id=post_id)
         db.session.add(new_save)
         db.session.commit()
-        flash('Post saved successfully!', 'success')
+        action_type = 'saved'
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            flash('Post saved successfully!', 'success')
+        
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': action_type})
         
     return redirect(request.referrer or url_for('main.main_page'))
 
@@ -536,9 +563,13 @@ def follow(username):
     username = unquote(username)
     user = User.query.filter_by(username=username).first()
     if user is None:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': f'User {username} not found.'})
         flash(f'User {username} not found.', 'danger')
         return redirect(url_for('main.main_page'))
     if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot follow yourself!'})
         flash('You cannot follow yourself!', 'warning')
         return redirect(url_for('main.user_posts', username=username))
     current_user.follow(user)
@@ -546,6 +577,10 @@ def follow(username):
     db.session.add(notif)
     send_notification_email(user, 'New Follower on Writer\'s Hub', f"{current_user.username} started following you on Writer's Hub!")
     db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'followed'})
+        
     flash(f'You are following {username}!', 'success')
     return redirect(request.referrer or url_for('main.user_posts', username=username))
 
@@ -556,13 +591,21 @@ def unfollow(username):
     username = unquote(username)
     user = User.query.filter_by(username=username).first()
     if user is None:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': f'User {username} not found.'})
         flash(f'User {username} not found.', 'danger')
         return redirect(url_for('main.main_page'))
     if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot unfollow yourself!'})
         flash('You cannot unfollow yourself!', 'warning')
         return redirect(url_for('main.user_posts', username=username))
     current_user.unfollow(user)
     db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'unfollowed'})
+        
     flash(f'You are not following {username}.', 'info')
     return redirect(request.referrer or url_for('main.user_posts', username=username))
 
@@ -691,10 +734,14 @@ def share_post(post_id):
     
     recipient = User.query.filter_by(username=recipient_username).first()
     if not recipient:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'User not found to share with.'})
         flash('User not found to share with.', 'danger')
         return redirect(request.referrer or url_for('main.main_page'))
         
     if recipient == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot share a post with yourself.'})
         flash('You cannot share a post with yourself.', 'warning')
         return redirect(request.referrer or url_for('main.main_page'))
 
@@ -706,6 +753,10 @@ def share_post(post_id):
     )
     db.session.add(msg)
     db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success'})
+        
     flash(f'Post successfully shared with {recipient.username}!', 'success')
     return redirect(request.referrer or url_for('main.main_page'))
 
