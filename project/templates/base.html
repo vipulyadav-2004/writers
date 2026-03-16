@@ -209,6 +209,23 @@
   {% endif %}
 
   <main class="container mb-5">
+    <!-- One-time Update Banner -->
+    <div id="update-banner" class="alert alert-info alert-dismissible fade show glass-card py-3 mb-4 d-none position-relative" role="alert" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%); border-left: 5px solid var(--accent-color); border-right: none; border-top: none; border-bottom: none;">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-rocket-takeoff-fill fs-4 me-3" style="color: var(--accent-color);"></i>
+            <div>
+                <strong>New Features Added!</strong> 
+                <span class="d-block d-sm-inline ms-sm-1 small opacity-75">We just launched Threaded Comment Replies and new Social Media sharing options! <a href="/" class="text-decoration-none fw-bold" style="color: var(--primary-color);">Give them a try!</a></span>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-50 translate-middle-y end-0 me-3" data-bs-dismiss="alert" aria-label="Close" onclick="localStorage.setItem('hideUpdateBannerV1', 'true')" style="filter: invert(1); opacity: 0.5;"></button>
+    </div>
+    
+    <script>
+        if (!localStorage.getItem('hideUpdateBannerV1')) {
+            document.getElementById('update-banner').classList.remove('d-none');
+        }
+    </script>
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     {% for category, message in messages %}
