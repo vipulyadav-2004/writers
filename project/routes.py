@@ -288,55 +288,26 @@ def create_post():
 @login_required
 def update_post(post_id):
     post = Post.query.get_or_404(post_id)
-    body = request.form.get('body')
-    parent_id = request.form.get('parent_id')
-    
-    if body and body.strip():
-        comment = Comment(body=body.strip(), user_id=current_user.id, post_id=post_id)
-        if parent_id and parent_id.isdigit():
-            comment.parent_id = int(parent_id)
-        db.session.add(comment)
-        
-        # Determine whom to notify (post author OR parent comment author)
-        target_user = None
-        if comment.parent_id:
-            parent_comment = Comment.query.get(comment.parent_id)
-            if parent_comment and parent_comment.author != current_user:
-                target_user = parent_comment.author
-        else:
-            if post.author != current_user:
-                target_user = post.author
-                
-        if target_user:
-            notif = Notification(user_id=target_user.id, message=f"{current_user.username} replied to your post or comment", link=url_for('main.user_posts', username=current_user.username))
-            db.session.add(notif)
-            send_notification_email(target_user, 'New Reply on Writer's Hub', f"{current_user.username} replied: {body.strip()}")
-            
+    if post.author != current_user and not current_user.is_developer:
+        abort(403)
+    form = PostForm()
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data, 'post_pics')
+            post.image_file = picture_file
+        post.title = form.title.data
+        post.body = form.body.data
+        post.author_name = form.author_name.data
+        post.tags = form.tags.data
         db.session.commit()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            img_fn = current_user.image_file if current_user.image_file else 'default.jpg'
-            image_url = current_user.image_file if current_user.image_file and current_user.image_file.startswith('http') else url_for('static', filename='profile_pics/' + img_fn)
-            return jsonify({
-                'status': 'success',
-                'comment': {
-                    'id': comment.id,
-                    'parent_id': comment.parent_id,
-                    'username': current_user.username,
-                    'image_url': image_url,
-                    'body': comment.body,
-                    'timestamp': comment.timestamp.strftime('%b %d, %H:%M')
-                },
-                'comments_count': post.comments.count()
-            })
-            
-        flash('Comment added successfully!', 'success')
-    else:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'status': 'error', 'message': 'Comment cannot be empty.'}), 400
-        flash('Comment cannot be empty.', 'danger')
-        
-    return redirect(request.referrer or url_for('main.main_page'))
+        flash('Your post has been updated!', 'success')
+        return redirect(url_for('main.main_page'))
+    elif request.method == 'GET':
+        form.title.data = post.title
+        form.body.data = post.body
+        form.author_name.data = post.author_name
+        form.tags.data = post.tags
+    return render_template('create_post.html', title='Update Post', form=form, legend='Update Post')
 
 
 @main.route('/post/<int:post_id>/comment', methods=['POST'])
