@@ -214,18 +214,49 @@
                 </form>
                 <div class="comments-list">
                     {% for comment in post.comments %}
+                    {% if not comment.parent_id %}
                     <div class="d-flex mb-3">
                         <img src="{{ get_image_url(comment.author.image_file, 'profile_pics') }}"
                             class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
-                        <div class="glass-card flex-grow-1 p-3 m-0"
-                            style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong>{{ comment.author.username }}</strong>
-                                <small class="text-muted">{{ comment.timestamp.strftime('%b %d, %H:%M') }}</small>
+                        <div class="flex-grow-1">
+                            <div class="glass-card p-3 m-0"
+                                style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong>{{ comment.author.username }}</strong>
+                                    <small class="text-muted">{{ comment.timestamp.strftime('%b %d, %H:%M') }}</small>
+                                </div>
+                                <p class="mb-0 small text-white">{{ comment.body }}</p>
+                                <div class="mt-2 text-end">
+                                    <button class="btn btn-sm btn-link text-white p-0 text-decoration-none opacity-75" style="font-size: 0.75rem" onclick="document.getElementById('reply-form-{{ comment.id }}').classList.toggle('d-none');">Reply</button>
+                                </div>
                             </div>
-                            <p class="mb-0 small text-white">{{ comment.body }}</p>
+                            <!-- Reply form -->
+                            <form action="{{ url_for('main.comment_post', post_id=post.id) }}" method="POST" class="mt-2 d-none" id="reply-form-{{ comment.id }}" data-prevent-loader="true">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <input type="hidden" name="parent_id" value="{{ comment.id }}" />
+                                <div class="input-group input-group-sm mb-2">
+                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                    <button class="btn btn-primary" type="submit">Reply</button>
+                                </div>
+                            </form>
+                            <!-- Nested Replies -->
+                            <div class="replies-list mt-2 ms-4" id="replies-{{ comment.id }}">
+                                {% for reply in comment.replies %}
+                                <div class="d-flex mb-2">
+                                    <img src="{{ get_image_url(reply.author.image_file, 'profile_pics') }}" class="rounded-circle me-2 mt-1" style="width: 24px; height: 24px; object-fit: cover;">
+                                    <div class="glass-card flex-grow-1 p-2 m-0" style="border-radius: 0.75rem; box-shadow: none; background: rgba(0,0,0,0.05);">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong>{{ reply.author.username }}</strong>
+                                            <small class="text-muted" style="font-size: 0.65rem;">{{ reply.timestamp.strftime('%b %d, %H:%M') }}</small>
+                                        </div>
+                                        <p class="mb-0 small text-white">{{ reply.body }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
                     {% else %}
                     <p class="text-muted small">No comments yet. Be the first to comment!</p>
                     {% endfor %}
@@ -425,22 +456,62 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             } 
                             else if (action.includes('/comment')) {
-                                const commentsList = form.closest('.collapse').querySelector('.comments-list');
-                                const commentHtml = `
-                                <div class="d-flex mb-3">
-                                    <img src="${data.comment.image_url}" class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
-                                    <div class="glass-card flex-grow-1 p-3 m-0" style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <strong>${data.comment.username}</strong>
-                                            <small class="text-muted">${data.comment.timestamp}</small>
+                                const isReply = data.comment.parent_id !== null && data.comment.parent_id !== undefined;
+                                
+                                if (isReply) {
+                                    const repliesList = document.getElementById(`replies-${data.comment.parent_id}`);
+                                    const replyHtml = `
+                                    <div class="d-flex mb-2">
+                                        <img src="${data.comment.image_url}" class="rounded-circle me-2 mt-1" style="width: 24px; height: 24px; object-fit: cover;">
+                                        <div class="glass-card flex-grow-1 p-2 m-0" style="border-radius: 0.75rem; box-shadow: none; background: rgba(0,0,0,0.05);">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <strong>${data.comment.username}</strong>
+                                                <small class="text-muted" style="font-size:0.65rem;">${data.comment.timestamp}</small>
+                                            </div>
+                                            <p class="mb-0 small text-white">${data.comment.body}</p>
                                         </div>
-                                        <p class="mb-0 small text-white">${data.comment.body}</p>
-                                    </div>
-                                </div>`;
-                                const noComments = commentsList.querySelector('p.text-muted');
-                                if (noComments) noComments.remove();
-                                commentsList.insertAdjacentHTML('beforeend', commentHtml);
-                                form.reset();
+                                    </div>`;
+                                    if (repliesList) repliesList.insertAdjacentHTML('beforeend', replyHtml);
+                                    
+                                    // if it's the inline reply form, hide it
+                                    if(form.id.startsWith('reply-form-')) {
+                                        form.classList.add('d-none');
+                                    }
+                                    form.reset();
+                                } else {
+                                    const commentsList = form.closest('.collapse').querySelector('.comments-list');
+                                    const csrfToken = form.querySelector('input[name="csrf_token"]') ? form.querySelector('input[name="csrf_token"]').value : '';
+                                    const commentHtml = `
+                                    <div class="d-flex mb-3">
+                                        <img src="${data.comment.image_url}" class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
+                                        <div class="flex-grow-1">
+                                            <div class="glass-card p-3 m-0" style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <strong>${data.comment.username}</strong>
+                                                    <small class="text-muted">${data.comment.timestamp}</small>
+                                                </div>
+                                                <p class="mb-0 small text-white">${data.comment.body}</p>
+                                                <div class="mt-2 text-end">
+                                                    <button class="btn btn-sm btn-link text-white p-0 text-decoration-none opacity-75" style="font-size: 0.75rem" onclick="document.getElementById('reply-form-${data.comment.id}').classList.toggle('d-none');">Reply</button>
+                                                </div>
+                                            </div>
+                                            <form action="${action}" method="POST" class="mt-2 d-none" id="reply-form-${data.comment.id}" data-prevent-loader="true">
+                                                <input type="hidden" name="csrf_token" value="${csrfToken}" />
+                                                <input type="hidden" name="parent_id" value="${data.comment.id}" />
+                                                <div class="input-group input-group-sm mb-2">
+                                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                                    <button class="btn btn-primary" type="submit">Reply</button>
+                                                </div>
+                                            </form>
+                                            <div class="replies-list mt-2 ms-4" id="replies-${data.comment.id}"></div>
+                                        </div>
+                                    </div>`;
+                                    
+                                    const noComments = commentsList.querySelector('p.text-muted');
+                                    if (noComments) noComments.remove();
+                                    commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                                    form.reset();
+                                }
                                 
                                 const postCard = form.closest('.glass-card');
                                 const commentBtnBadge = postCard.querySelector('[data-bs-target^="#comments-"] .badge');

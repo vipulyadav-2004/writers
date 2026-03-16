@@ -288,86 +288,30 @@ def create_post():
 @login_required
 def update_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author != current_user and not current_user.is_developer:
-        abort(403)
-    form = PostForm()
-    if form.validate_on_submit():
-        if form.picture.data:
-            picture_file = save_picture(form.picture.data, 'post_pics')
-            post.image_file = picture_file
-        post.title = form.title.data
-        post.body = form.body.data
-        post.author_name = form.author_name.data
-        post.tags = form.tags.data
-        db.session.commit()
-        flash('Your post has been updated!', 'success')
-        return redirect(url_for('main.main_page'))
-    elif request.method == 'GET':
-        form.title.data = post.title
-        form.body.data = post.body
-        form.author_name.data = post.author_name
-        form.tags.data = post.tags
-    return render_template('create_post.html', title='Update Post', form=form, legend='Update Post')
-
-@main.route('/post/<int:post_id>/delete', methods=['POST'])
-@login_required
-def delete_post(post_id):
-    print(f"DEBUG: Attempting to delete post {post_id}")
-    post = Post.query.get_or_404(post_id)
-    if post.author != current_user and not current_user.is_developer:
-        print(f"DEBUG: Permission denied for user {current_user}")
-        abort(403)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Your post has been deleted!', 'success')
-    print(f"DEBUG: Post {post_id} deleted successfully")
-    
-    # Redirect to the page the user came from, or main page if unknown
-    # If the user deleted the post from a single post view (which no longer exists), fallback to main page.
-    # We check if 'profile' is in the referrer to return them to the profile page.
-    next_page = request.referrer
-    if next_page and 'profile' in next_page:
-        return redirect(url_for('main.profile_page'))
-    
-    # Otherwise, default to the main page feed
-    return redirect(url_for('main.main_page'))
-
-@main.route('/post/<int:post_id>/like', methods=['POST'])
-@login_required
-def like_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
-    
-    if like:
-        db.session.delete(like)
-        db.session.commit()
-    else:
-        new_like = Like(user_id=current_user.id, post_id=post_id)
-        db.session.add(new_like)
-        if post.author != current_user:
-            notif = Notification(user_id=post.author.id, message=f"{current_user.username} liked your post '{post.title[:20]}...'", link=url_for('main.user_posts', username=current_user.username))
-            db.session.add(notif)
-            send_notification_email(post.author, 'New Like on Writer\'s Hub', f"{current_user.username} liked your post '{post.title}'.")
-        db.session.commit()
-        
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'status': 'success', 'action': 'unliked' if like else 'liked', 'likes_count': post.likes.count()})
-        
-    return redirect(request.referrer or url_for('main.main_page'))
-
-@main.route('/post/<int:post_id>/comment', methods=['POST'])
-@login_required
-def comment_post(post_id):
-    post = Post.query.get_or_404(post_id)
     body = request.form.get('body')
+    parent_id = request.form.get('parent_id')
     
     if body and body.strip():
         comment = Comment(body=body.strip(), user_id=current_user.id, post_id=post_id)
+        if parent_id and parent_id.isdigit():
+            comment.parent_id = int(parent_id)
         db.session.add(comment)
-        if post.author != current_user:
-            notif = Notification(user_id=post.author.id, message=f"{current_user.username} commented on your post '{post.title[:20]}...'", link=url_for('main.user_posts', username=current_user.username))
+        
+        # Determine whom to notify (post author OR parent comment author)
+        target_user = None
+        if comment.parent_id:
+            parent_comment = Comment.query.get(comment.parent_id)
+            if parent_comment and parent_comment.author != current_user:
+                target_user = parent_comment.author
+        else:
+            if post.author != current_user:
+                target_user = post.author
+                
+        if target_user:
+            notif = Notification(user_id=target_user.id, message=f"{current_user.username} replied to your post or comment", link=url_for('main.user_posts', username=current_user.username))
             db.session.add(notif)
-            send_notification_email(post.author, 'New Comment on Writer\'s Hub', f"{current_user.username} commented on your post '{post.title}':\n\n\"{body.strip()}\"")
+            send_notification_email(target_user, 'New Reply on Writer's Hub', f"{current_user.username} replied: {body.strip()}")
+            
         db.session.commit()
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -376,6 +320,62 @@ def comment_post(post_id):
             return jsonify({
                 'status': 'success',
                 'comment': {
+                    'id': comment.id,
+                    'parent_id': comment.parent_id,
+                    'username': current_user.username,
+                    'image_url': image_url,
+                    'body': comment.body,
+                    'timestamp': comment.timestamp.strftime('%b %d, %H:%M')
+                },
+                'comments_count': post.comments.count()
+            })
+            
+        flash('Comment added successfully!', 'success')
+    else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'Comment cannot be empty.'}), 400
+        flash('Comment cannot be empty.', 'danger')
+        
+    return redirect(request.referrer or url_for('main.main_page'))
+
+
+@main.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def comment_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    body = request.form.get('body')
+    parent_id = request.form.get('parent_id')
+    
+    if body and body.strip():
+        comment = Comment(body=body.strip(), user_id=current_user.id, post_id=post_id)
+        if parent_id and parent_id.isdigit():
+            comment.parent_id = int(parent_id)
+        db.session.add(comment)
+        
+        target_user = None
+        if comment.parent_id:
+            parent_comment = Comment.query.get(comment.parent_id)
+            if parent_comment and parent_comment.author != current_user:
+                target_user = parent_comment.author
+        else:
+            if post.author != current_user:
+                target_user = post.author
+                
+        if target_user:
+            notif = Notification(user_id=target_user.id, message=f"{current_user.username} replied to your post or comment", link=url_for('main.user_posts', username=current_user.username))
+            db.session.add(notif)
+            send_notification_email(target_user, 'New Reply on Writer\'s Hub', f"{current_user.username} replied:\n\n\"{body.strip()}\"")
+            
+        db.session.commit()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            img_fn = current_user.image_file if current_user.image_file else 'default.jpg'
+            image_url = current_user.image_file if current_user.image_file and current_user.image_file.startswith('http') else url_for('static', filename='profile_pics/' + img_fn)
+            return jsonify({
+                'status': 'success',
+                'comment': {
+                    'id': comment.id,
+                    'parent_id': comment.parent_id,
                     'username': current_user.username,
                     'image_url': image_url,
                     'body': comment.body,
