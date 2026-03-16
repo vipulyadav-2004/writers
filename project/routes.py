@@ -309,6 +309,52 @@ def update_post(post_id):
         form.tags.data = post.tags
     return render_template('create_post.html', title='Update Post', form=form, legend='Update Post')
 
+@main.route('/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    print(f"DEBUG: Attempting to delete post {post_id}")
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user and not current_user.is_developer:
+        print(f"DEBUG: Permission denied for user {current_user}")
+        abort(403)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Your post has been deleted!', 'success')
+    print(f"DEBUG: Post {post_id} deleted successfully")
+    
+    # Redirect to the page the user came from, or main page if unknown
+    # If the user deleted the post from a single post view (which no longer exists), fallback to main page.
+    # We check if 'profile' is in the referrer to return them to the profile page.
+    next_page = request.referrer
+    if next_page and 'profile' in next_page:
+        return redirect(url_for('main.profile_page'))
+    
+    # Otherwise, default to the main page feed
+    return redirect(url_for('main.main_page'))
+
+@main.route('/post/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    
+    if like:
+        db.session.delete(like)
+        db.session.commit()
+    else:
+        new_like = Like(user_id=current_user.id, post_id=post_id)
+        db.session.add(new_like)
+        if post.author != current_user:
+            notif = Notification(user_id=post.author.id, message=f"{current_user.username} liked your post '{post.title[:20]}...'", link=url_for('main.user_posts', username=current_user.username))
+            db.session.add(notif)
+            send_notification_email(post.author, 'New Like on Writer\'s Hub', f"{current_user.username} liked your post '{post.title}'.")
+        db.session.commit()
+        
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'unliked' if like else 'liked', 'likes_count': post.likes.count()})
+        
+    return redirect(request.referrer or url_for('main.main_page'))
+
 
 @main.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
