@@ -4,7 +4,6 @@
 <div class="row">
     <div class="col-md-10 col-lg-8 mx-auto">
 
-        {% if current_user.is_authenticated %}
         {% if user %}
         <div class="glass-card text-center py-4 mb-4">
             <h2 class="auth-title mb-3">Profile</h2>
@@ -43,9 +42,9 @@
                     </a>
                 </div>
             </div>
-            {% if current_user.username != user.username %}
+            {% if not current_user.is_authenticated or current_user.username != user.username %}
             <div class="mt-4 d-flex flex-wrap justify-content-center align-items-stretch gap-2">
-                {% if current_user.is_following(user) %}
+                {% if current_user.is_authenticated and current_user.is_following(user) %}
                 <form action="{{ url_for('main.unfollow', username=user.username) }}" method="POST"
                     class="m-0 flex-grow-1" style="min-width: 110px;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -98,8 +97,7 @@
                     alt="PFP" style="width: 25px; height: 25px; object-fit: cover;">
                 <a href="{{ url_for('main.user_posts', username=post.author.username) }}"
                     class="text-decoration-none text-dark"><strong>{{ post.author.username }}</strong></a>
-                {% if current_user.is_authenticated and current_user != post.author and not
-                current_user.is_following(post.author) %}
+                {% if not current_user.is_authenticated or (current_user != post.author and not current_user.is_following(post.author)) %}
             <form action="{{ url_for('main.follow', username=post.author.username) }}" method="POST"
                 class="d-inline ms-1 me-1">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -169,6 +167,8 @@
                             <li><button class="dropdown-item" data-bs-toggle="modal"
                                     data-bs-target="#shareModal{{ post.id }}"><i class="bi bi-send me-2"></i>Send in
                                     Message</button></li>
+                            {% else %}
+                            <li><a class="dropdown-item" href="{{ url_for('main.login_page') }}"><i class="bi bi-send me-2"></i>Send in Message</a></li>
                             {% endif %}
                         </ul>
                     </div>
@@ -205,7 +205,6 @@
             <div class="collapse mt-3" id="comments-{{ post.id }}">
                 <hr class="divider">
                 <h5 class="mb-3">Comments</h5>
-                {% if current_user.is_authenticated %}
                 <form action="{{ url_for('main.comment_post', post_id=post.id) }}" method="POST" class="mb-4">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <div class="input-group">
@@ -213,7 +212,6 @@
                         <button class="btn btn-primary" type="submit">Post</button>
                     </div>
                 </form>
-                {% endif %}
                 <div class="comments-list">
                     {% for comment in post.comments %}
                     <div class="d-flex mb-3">
@@ -360,102 +358,6 @@
         </div>
         {% endif %}
 
-        {% else %}
-        <!-- Hero Section -->
-        <div class="glass-card text-center py-5 px-3 mx-auto mb-5 border-0 shadow-lg"
-            style="max-width: 800px; background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.5)); position: relative; overflow: hidden; border-radius: 2rem;">
-            <!-- Ambient blurred orbs -->
-            <div
-                style="position: absolute; top: -50px; left: -50px; width: 200px; height: 200px; background: rgba(168, 85, 247, 0.35); filter: blur(70px); border-radius: 50%; pointer-events: none;">
-            </div>
-            <div
-                style="position: absolute; bottom: -50px; right: -50px; width: 250px; height: 250px; background: rgba(59, 130, 246, 0.35); filter: blur(80px); border-radius: 50%; pointer-events: none;">
-            </div>
-
-            <div class="position-relative z-1 py-3">
-                <div class="mb-4 d-inline-block p-3 rounded-circle"
-                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-                    <img src="{{ url_for('static', filename='images/weblogo.png') }}" alt="Writer's Hub Logo"
-                        style="height: 65px; width: auto; object-fit: contain;">
-                </div>
-                <h1 class="display-4 fw-bolder gradient-text mb-4" style="line-height: 1.1; letter-spacing: -1px;">
-                    Unleash Your<br>Creative Voice</h1>
-                <p class="lead mb-5 mx-auto px-2"
-                    style="max-width: 550px; font-weight: 300; font-size: 1.15rem; color: #e2e8f0 !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                    A premium, distraction-free universe for bloggers, poets, and visionaries. Share your world, connect
-                    deeply, and elevate your craft.
-                </p>
-
-                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center align-items-center mb-2">
-                    <a href="{{ url_for('main.create_post') }}"
-                        class="btn btn-auth btn-lg px-4 rounded-pill shadow d-flex align-items-center justify-content-center"
-                        style="font-size: 1.05rem; padding-top: 0.7rem; padding-bottom: 0.7rem; width: 100%; max-width: 250px;">
-                        Start Writing <i class="bi bi-arrow-right ms-2 fs-5"></i>
-                    </a>
-                    <a href="{{ url_for('main.explore_page') }}"
-                        class="btn btn-outline-secondary btn-lg px-4 rounded-pill d-flex align-items-center justify-content-center"
-                        style="font-size: 1.05rem; padding-top: 0.7rem; padding-bottom: 0.7rem; border-width: 2px; width: 100%; max-width: 250px;">
-                        Explore Feed
-                    </a>
-                </div>
-                <div class="mt-4 pt-2">
-                    <p class="text-muted mb-0" style="font-size: 0.95rem;">Already a member? <a
-                            href="{{ url_for('main.login_page') }}"
-                            class="text-info fw-bold text-decoration-none ms-1">Sign in here</a></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Features Grid -->
-        <div class="row g-4 mb-3">
-            <div class="col-md-12 col-lg-4">
-                <div class="glass-card h-100 text-center p-4 feature-card"
-                    style="border-radius: 1.5rem; border-top: 2px solid rgba(168, 85, 247, 0.4); background: rgba(30, 41, 59, 0.5);">
-                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                        style="width: 60px; height: 60px; background: rgba(168, 85, 247, 0.15);">
-                        <i class="bi bi-pencil-square fs-3" style="color: #a855f7;"></i>
-                    </div>
-                    <h3 class="h5 fw-bold mb-3 text-white">Express Freely</h3>
-                    <p class="text-muted small mb-0">Write without limits in a stunning glassmorphic editor designed to
-                        inspire your flow state.</p>
-                </div>
-            </div>
-            <div class="col-md-12 col-lg-4">
-                <div class="glass-card h-100 text-center p-4 feature-card"
-                    style="border-radius: 1.5rem; border-top: 2px solid rgba(59, 130, 246, 0.4); background: rgba(30, 41, 59, 0.5);">
-                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                        style="width: 60px; height: 60px; background: rgba(59, 130, 246, 0.15);">
-                        <i class="bi bi-people-fill fs-3" style="color: #3b82f6;"></i>
-                    </div>
-                    <h3 class="h5 fw-bold mb-3 text-white">Connect & Grow</h3>
-                    <p class="text-muted small mb-0">Follow brilliant minds, build your audience, and engage deeply
-                        through likes and discussions.</p>
-                </div>
-            </div>
-            <div class="col-md-12 col-lg-4">
-                <div class="glass-card h-100 text-center p-4 feature-card"
-                    style="border-radius: 1.5rem; border-top: 2px solid rgba(236, 72, 153, 0.4); background: rgba(30, 41, 59, 0.5);">
-                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                        style="width: 60px; height: 60px; background: rgba(236, 72, 153, 0.15);">
-                        <i class="bi bi-palette-fill fs-3" style="color: #ec4899;"></i>
-                    </div>
-                    <h3 class="h5 fw-bold mb-3 text-white">Make it Yours</h3>
-                    <p class="text-muted small mb-0">Personalize your space with custom accent colors, visibility
-                        settings, and a dynamic profile.</p>
-                </div>
-            </div>
-        </div>
-        <style>
-            .feature-card {
-                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-            }
-
-            .feature-card:hover {
-                transform: translateY(-8px);
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(168, 85, 247, 0.15);
-            }
-        </style>
-        {% endif %}
 
     </div>
 </div>
