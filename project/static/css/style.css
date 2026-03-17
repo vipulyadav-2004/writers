@@ -511,7 +511,7 @@ a:hover {
     max-width: 80vw;
     height: auto;
     object-fit: contain;
-    animation: zoomInIntro 2.5s ease-out forwards;
+    animation: zoomInIntro 3.5s ease-out forwards;
 }
 
 @keyframes zoomInIntro {
