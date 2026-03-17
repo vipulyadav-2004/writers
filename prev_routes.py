@@ -1,0 +1,769 @@
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, abort, current_app, session
+from flask_login import login_user, logout_user, current_user, login_required
+from sqlalchemy import or_, and_
+from project.models import User, Post, Message as DBMessage, Like, Comment, Notification, SavedPost
+from project.forms import LoginForm, RegistrationForm, PostForm, UpdateProfileForm, MessageForm, UpdatePasswordForm, UpdateEmailForm, DeleteAccountForm, PreferencesForm
+from project import db, oauth, mail
+from flask_mail import Message
+from flask_wtf.csrf import CSRFError
+import secrets
+import os
+from PIL import Image
+
+main = Blueprint('main', __name__)
+
+from datetime import datetime
+
+@main.before_app_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
+
+def send_verification_email(user):
+    token = user.get_verification_token()
+    msg = Message('Verify Your Email - Writer\'s Hub',
+                  recipients=[user.email])
+    verify_url = url_for('main.verify_token_route', token=token, _external=True)
+    msg.body = f'''To verify your Writer's Hub account, simply click the link below:
+
+{verify_url}
+
+If you did not request this account, you can safely ignore this email and nothing will occur.
+'''
+    mail.send(msg)
+
+def send_notification_email(user, subject, body):
+    if not user.email_notif_enabled:
+        return
+    msg = Message(subject, recipients=[user.email])
+    msg.body = body
+    try:
+        mail.send(msg)
+    except Exception as e:
+        print(f"Failed to send notification email: {e}")
+
+@main.app_context_processor
+def inject_image_helper():
+    def get_image_url(image_file, folder):
+        if not image_file:
+            # Fallback if somehow empty
+            return url_for('static', filename=f"{folder}/default.jpg") if folder == 'profile_pics' else ''
+        if image_file.startswith('http'):
+            return image_file
+        return url_for('static', filename=f"{folder}/{image_file}")
+    return dict(get_image_url=get_image_url)
+
+@main.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash('Security token missing or invalid. Please try again.', 'danger')
+    return redirect(request.referrer or url_for('main.main_page'))
+
+import cloudinary
+import cloudinary.uploader
+
+def save_picture(form_picture, folder):
+    # Depending on your form inputs, you may want to optimize the original before sending
+    # or you can rely on Cloudinary's native optimization API! Let's resize in pillow 
+    # and send the raw bytes up to save bandwidth
+    output_size = (1200, 1200)
+    if folder == 'profile_pics':
+        output_size = (250, 250)
+    
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    
+    import io
+    # Convert PIL Image back to byte stream so Cloudinary can receive it
+    byte_io = io.BytesIO()
+    # Handle PNG vs JPEG format preservation
+    img_format = i.format if i.format else 'JPEG'
+    i.save(byte_io, format=img_format)
+    byte_io.seek(0)
+    
+    # Upload byte stream directly to cloudinary folder
+    # Assigns it a dynamic unique ID
+    response = cloudinary.uploader.upload(
+        byte_io, 
+        folder=f"writers_hub/{folder}", 
+        resource_type="image"
+    )
+    
+    # Cloudinary return a JSON blob, we just want the direct image URL string to save to our Database
+    return response.get("secure_url")
+
+@main.route('/')
+def main_page():
+    if current_user.is_authenticated:
+        posts_query = current_user.followed_posts()
+        if current_user.feed_sorting == 'popular':
+            from sqlalchemy import func
+            posts = posts_query.outerjoin(Like).group_by(Post.id).order_by(func.count(Like.id).desc(), Post.timestamp.desc()).all()
+        else:
+            posts = posts_query.all()
+    else:
+        posts = Post.query.order_by(Post.timestamp.desc()).all()
+    return render_template('index.html', posts=posts)
+
+@main.route('/explore')
+def explore_page():
+    posts = Post.query.order_by(Post.timestamp.desc()).all()
+    if current_user.is_authenticated and current_user.feed_sorting == 'popular':
+        from sqlalchemy import func
+        posts = Post.query.outerjoin(Like).group_by(Post.id).order_by(func.count(Like.id).desc(), Post.timestamp.desc()).all()
+    return render_template('index.html', posts=posts, title="Explore Feed")
+
+@main.route("/register", methods=['GET', 'POST'])
+def register_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.main_page'))
+    
+    form = RegistrationForm() # Step 1: Initialize the form
+    
+    if form.validate_on_submit(): # Step 2: Use validate_on_submit
+        user = User(username=form.username.data, email=form.email.data, is_verified=False)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        
+        try:
+            send_verification_email(user)
+            flash('Registration successful! An email has been sent to verify your account.', 'info')
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+            flash('Registration successful! However, we could not send the verification email. Please contact support.', 'warning')
+            
+        return redirect(url_for('main.login_page'))
+    
+    # Step 3: Pass form=form to the template
+    return render_template('register.html', form=form)
+
+@main.route("/verify_email/<token>")
+def verify_token_route(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('main.main_page'))
+    user = User.verify_token(token)
+    if user is None:
+        flash('That is an invalid or expired verification link.', 'warning')
+        return redirect(url_for('main.login_page'))
+    
+    user.is_verified = True
+    db.session.commit()
+    flash('Your account has been verified successfully! You may now log in.', 'success')
+    if 'draft_post' in session:
+        return redirect(url_for('main.login_page', next=url_for('main.create_post')))
+    return redirect(url_for('main.login_page'))
+
+@main.route("/login", methods=['GET', 'POST'])
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.main_page'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            if not getattr(user, 'is_verified', True):
+                flash('Please check your email and click the verification link before logging in.', 'warning')
+                return redirect(url_for('main.login_page'))
+            login_user(user, remember=True)
+            next_page = request.args.get('next')
+            if 'draft_post' in session:
+                return redirect(url_for('main.create_post'))
+            return redirect(next_page) if next_page else redirect(url_for('main.profile_page'))
+        else:
+            flash('Login failed. Please check email and password.', 'danger')
+            
+    return render_template('login.html', form=form)
+
+@main.route('/login/google')
+def google_login():
+    redirect_uri = url_for('main.google_authorize', _external=True)
+    print(f"DEBUG: Redirect URI being sent: {redirect_uri}")
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@main.route('/login/google/callback')
+def google_authorize():
+    token = oauth.google.authorize_access_token()
+    user_info = token.get('userinfo')
+    if not user_info:
+        # Fallback if userinfo not in token (depends on scope/provider)
+        user_info = oauth.google.userinfo()
+    
+    if not user_info:
+        flash('Failed to fetch user info from Google.', 'danger')
+        return redirect(url_for('main.login_page'))
+        
+    email = user_info.get('email')
+    if email:
+        email = email.lower()
+        
+    if not email:
+        flash('Google account does not have a verified email.', 'danger')
+        return redirect(url_for('main.login_page'))
+
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        # Create new user
+        # Generate a unique username based on email or name
+        base_username = user_info.get('name', '').replace(' ', '').lower() or email.split('@')[0]
+        # Ensure username is unique
+        username = base_username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        user = User(
+            username=username,
+            email=email,
+            is_verified=True
+            # password_hash is optional/nullable, so we can leave it empty
+            # or set a random unguessable password if desired
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash('Account created via Google!', 'success')
+    else:
+        # Guarantee existing Google users are verified retroactively
+        if not getattr(user, 'is_verified', True):
+            user.is_verified = True
+            db.session.commit()
+        flash('Logged in via Google!', 'success')
+
+    login_user(user, remember=True)
+    if 'draft_post' in session:
+        return redirect(url_for('main.create_post'))
+    return redirect(url_for('main.main_page'))
+
+@main.route('/post/new', methods=['GET', 'POST'])
+def create_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        picture_file = None
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data, 'post_pics')
+            
+        if not current_user.is_authenticated:
+            session['draft_post'] = {
+                'title': form.title.data,
+                'body': form.body.data,
+                'author_name': form.author_name.data,
+                'tags': form.tags.data,
+                'picture_file': picture_file
+            }
+            flash('Please log in or register to publish your post. Your draft has been saved!', 'info')
+            return redirect(url_for('main.login_page', next=url_for('main.create_post')))
+
+        if not picture_file and 'draft_post' in session and session['draft_post'].get('picture_file'):
+            picture_file = session['draft_post']['picture_file']
+
+        post = Post(
+            title=form.title.data, 
+            body=form.body.data, 
+            author_name=form.author_name.data,
+            tags=form.tags.data,
+            image_file=picture_file,
+            author=current_user
+        )
+        db.session.add(post)
+        db.session.commit()
+        flash('Post created!', 'success')
+        if 'draft_post' in session:
+            session.pop('draft_post')
+        return redirect(url_for('main.main_page'))
+    
+    if request.method == 'GET' and 'draft_post' in session:
+        draft = session['draft_post']
+        form.title.data = draft.get('title', '')
+        form.body.data = draft.get('body', '')
+        form.author_name.data = draft.get('author_name', '')
+        form.tags.data = draft.get('tags', '')
+    
+    return render_template('create_post.html', form=form, legend='Create New Post', title='New Post')
+
+@main.route('/post/<int:post_id>/update', methods=['GET', 'POST'])
+@login_required
+def update_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user and not current_user.is_developer:
+        abort(403)
+    form = PostForm()
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data, 'post_pics')
+            post.image_file = picture_file
+        post.title = form.title.data
+        post.body = form.body.data
+        post.author_name = form.author_name.data
+        post.tags = form.tags.data
+        db.session.commit()
+        flash('Your post has been updated!', 'success')
+        return redirect(url_for('main.main_page'))
+    elif request.method == 'GET':
+        form.title.data = post.title
+        form.body.data = post.body
+        form.author_name.data = post.author_name
+        form.tags.data = post.tags
+    return render_template('create_post.html', title='Update Post', form=form, legend='Update Post')
+
+@main.route('/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    print(f"DEBUG: Attempting to delete post {post_id}")
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user and not current_user.is_developer:
+        print(f"DEBUG: Permission denied for user {current_user}")
+        abort(403)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Your post has been deleted!', 'success')
+    print(f"DEBUG: Post {post_id} deleted successfully")
+    
+    # Redirect to the page the user came from, or main page if unknown
+    # If the user deleted the post from a single post view (which no longer exists), fallback to main page.
+    # We check if 'profile' is in the referrer to return them to the profile page.
+    next_page = request.referrer
+    if next_page and 'profile' in next_page:
+        return redirect(url_for('main.profile_page'))
+    
+    # Otherwise, default to the main page feed
+    return redirect(url_for('main.main_page'))
+
+@main.route('/post/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    
+    if like:
+        db.session.delete(like)
+        db.session.commit()
+    else:
+        new_like = Like(user_id=current_user.id, post_id=post_id)
+        db.session.add(new_like)
+        if post.author != current_user:
+            notif = Notification(user_id=post.author.id, message=f"{current_user.username} liked your post '{post.title[:20]}...'", link=url_for('main.user_posts', username=current_user.username))
+            db.session.add(notif)
+            send_notification_email(post.author, 'New Like on Writer\'s Hub', f"{current_user.username} liked your post '{post.title}'.")
+        db.session.commit()
+        
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'unliked' if like else 'liked', 'likes_count': post.likes.count()})
+        
+    return redirect(request.referrer or url_for('main.main_page'))
+
+@main.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def comment_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    body = request.form.get('body')
+    
+    if body and body.strip():
+        comment = Comment(body=body.strip(), user_id=current_user.id, post_id=post_id)
+        db.session.add(comment)
+        if post.author != current_user:
+            notif = Notification(user_id=post.author.id, message=f"{current_user.username} commented on your post '{post.title[:20]}...'", link=url_for('main.user_posts', username=current_user.username))
+            db.session.add(notif)
+            send_notification_email(post.author, 'New Comment on Writer\'s Hub', f"{current_user.username} commented on your post '{post.title}':\n\n\"{body.strip()}\"")
+        db.session.commit()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            img_fn = current_user.image_file if current_user.image_file else 'default.jpg'
+            image_url = current_user.image_file if current_user.image_file and current_user.image_file.startswith('http') else url_for('static', filename='profile_pics/' + img_fn)
+            return jsonify({
+                'status': 'success',
+                'comment': {
+                    'username': current_user.username,
+                    'image_url': image_url,
+                    'body': comment.body,
+                    'timestamp': comment.timestamp.strftime('%b %d, %H:%M')
+                },
+                'comments_count': post.comments.count()
+            })
+            
+        flash('Comment added successfully!', 'success')
+    else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'Comment cannot be empty.'}), 400
+        flash('Comment cannot be empty.', 'danger')
+        
+    return redirect(request.referrer or url_for('main.main_page'))
+
+@main.route('/post/<int:post_id>/save', methods=['POST'])
+@login_required
+def save_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    saved_post = SavedPost.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    
+    if saved_post:
+        db.session.delete(saved_post)
+        db.session.commit()
+        action_type = 'unsaved'
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            flash('Post removed from saved posts.', 'info')
+    else:
+        new_save = SavedPost(user_id=current_user.id, post_id=post_id)
+        db.session.add(new_save)
+        db.session.commit()
+        action_type = 'saved'
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            flash('Post saved successfully!', 'success')
+        
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': action_type})
+        
+    return redirect(request.referrer or url_for('main.main_page'))
+
+@main.route('/logout')
+@login_required
+def logout_page():
+    logout_user()
+    flash('Logged out.', 'info')
+    return redirect(url_for('main.main_page'))
+
+@main.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile_page():
+    form = UpdateProfileForm()
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data, 'profile_pics')
+            current_user.image_file = picture_file
+        if form.username.data != current_user.username:
+            current_user.username = form.username.data
+        db.session.commit()
+        flash('Your profile has been updated!', 'success')
+        return redirect(url_for('main.profile_page'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+
+    # Fetch only posts belonging to the logged-in user
+    user_posts = Post.query.filter_by(author=current_user).order_by(Post.timestamp.desc()).all()
+    
+    # Check if Cloudinary HTTP or Local Default
+    if current_user.image_file and current_user.image_file.startswith('http'):
+        image_file = current_user.image_file
+    else:
+        img_fn = current_user.image_file if current_user.image_file else 'default.jpg'
+        image_file = url_for('static', filename='profile_pics/' + img_fn)
+        
+    # Fetch saved posts
+    saved_posts = Post.query.join(SavedPost).filter(SavedPost.user_id == current_user.id).order_by(SavedPost.timestamp.desc()).all()
+        
+    return render_template('profile.html', username=current_user.username, posts=user_posts, form=form, image_file=image_file, saved_posts=saved_posts)
+
+@main.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings_page():
+    password_form = UpdatePasswordForm()
+    email_form = UpdateEmailForm()
+    delete_form = DeleteAccountForm()
+    prefs_form = PreferencesForm()
+    
+    # Pre-populate forms
+    if request.method == 'GET':
+        email_form.email.data = current_user.email
+        prefs_form.msg_preference.data = current_user.msg_preference
+        prefs_form.profile_visibility.data = current_user.profile_visibility
+        prefs_form.two_factor_enabled.data = current_user.two_factor_enabled
+        prefs_form.email_notif_enabled.data = current_user.email_notif_enabled
+        prefs_form.feed_sorting.data = current_user.feed_sorting
+        prefs_form.accent_color.data = current_user.accent_color
+
+    # Determine which form was submitted via a hidden field or distinct submit buttons
+    if 'submit_prefs' in request.form and prefs_form.validate_on_submit():
+        current_user.msg_preference = prefs_form.msg_preference.data
+        current_user.profile_visibility = prefs_form.profile_visibility.data
+        current_user.two_factor_enabled = prefs_form.two_factor_enabled.data
+        current_user.email_notif_enabled = prefs_form.email_notif_enabled.data
+        current_user.feed_sorting = prefs_form.feed_sorting.data
+        current_user.accent_color = prefs_form.accent_color.data
+        db.session.commit()
+        flash('Preferences updated successfully!', 'success')
+        return redirect(url_for('main.settings_page'))
+    if 'submit_password' in request.form and password_form.validate_on_submit():
+        if current_user.password_hash and current_user.check_password(password_form.current_password.data):
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash('Your password has been updated!', 'success')
+            return redirect(url_for('main.settings_page'))
+        else:
+            flash('Current password is incorrect.', 'danger')
+
+    if 'submit_email' in request.form and email_form.validate_on_submit():
+        current_user.email = email_form.email.data
+        db.session.commit()
+        flash('Your email address has been updated!', 'success')
+        return redirect(url_for('main.settings_page'))
+        
+    if 'submit_delete' in request.form and delete_form.validate_on_submit():
+        user = User.query.get(current_user.id)
+        logout_user()
+        db.session.delete(user)
+        db.session.commit()
+        flash('Your account has been permanently deleted.', 'info')
+        return redirect(url_for('main.main_page'))
+
+    return render_template('settings.html', 
+                           password_form=password_form, 
+                           email_form=email_form, 
+                           delete_form=delete_form,
+                           prefs_form=prefs_form)
+
+@main.route('/search')
+def search():
+    query = request.args.get('q')
+    if query:
+        # Search users by username (case insensitive)
+        users = User.query.filter(User.username.ilike(f'%{query}%')).all()
+        # Search posts by author name or tags
+        posts = Post.query.filter(
+            or_(
+                Post.author_name.ilike(f'%{query}%'),
+                Post.tags.ilike(f'%{query}%')
+            )
+        ).order_by(Post.timestamp.desc()).all()
+    else:
+        users = []
+        posts = []
+    
+    return render_template('search_results.html', users=users, posts=posts, query=query)
+
+@main.route('/user/<username>')
+def user_posts(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first_or_404()
+    posts = Post.query.filter_by(author=user).order_by(Post.timestamp.desc()).all()
+    return render_template('index.html', posts=posts, user=user, title=f"Posts by {user.username}")
+
+@main.route('/user/<int:user_id>/admin_delete', methods=['POST'])
+@login_required
+def admin_delete_user(user_id):
+    if not current_user.is_developer:
+        abort(403)
+    user = User.query.get_or_404(user_id)
+    if user == current_user:
+        flash("You cannot delete your own account via this button.", "warning")
+        return redirect(request.referrer or url_for('main.main_page'))
+    
+    # Cascade delete is handled by database, but we manually delete user
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Account for '{user.username}' and all associated data was permanently deleted.", "success")
+    return redirect(url_for('main.main_page'))
+
+@main.route('/follow/<username>', methods=['POST'])
+@login_required
+def follow(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': f'User {username} not found.'})
+        flash(f'User {username} not found.', 'danger')
+        return redirect(url_for('main.main_page'))
+    if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot follow yourself!'})
+        flash('You cannot follow yourself!', 'warning')
+        return redirect(url_for('main.user_posts', username=username))
+    current_user.follow(user)
+    notif = Notification(user_id=user.id, message=f"{current_user.username} started following you", link=url_for('main.user_posts', username=current_user.username))
+    db.session.add(notif)
+    send_notification_email(user, 'New Follower on Writer\'s Hub', f"{current_user.username} started following you on Writer's Hub!")
+    db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'followed'})
+        
+    flash(f'You are following {username}!', 'success')
+    return redirect(request.referrer or url_for('main.user_posts', username=username))
+
+@main.route('/unfollow/<username>', methods=['POST'])
+@login_required
+def unfollow(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': f'User {username} not found.'})
+        flash(f'User {username} not found.', 'danger')
+        return redirect(url_for('main.main_page'))
+    if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot unfollow yourself!'})
+        flash('You cannot unfollow yourself!', 'warning')
+        return redirect(url_for('main.user_posts', username=username))
+    current_user.unfollow(user)
+    db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success', 'action': 'unfollowed'})
+        
+    flash(f'You are not following {username}.', 'info')
+    return redirect(request.referrer or url_for('main.user_posts', username=username))
+
+@main.route('/user/<username>/followers')
+@login_required
+def followers(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first_or_404()
+    users = user.followers.all()
+    return render_template('users_list.html', users=users, user=user, title="Followers")
+
+@main.route('/user/<username>/following')
+@login_required
+def following(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first_or_404()
+    users = user.followed.all()
+    return render_template('users_list.html', users=users, user=user, title="Following")
+
+@main.route("/messages")
+@login_required
+def messages():
+    messages_query = DBMessage.query.filter(
+        or_(DBMessage.sender_id == current_user.id,
+            DBMessage.recipient_id == current_user.id)
+    ).order_by(DBMessage.timestamp.desc()).all()
+    
+    chat_users = []
+    seen_ids = set()
+    
+    for msg in messages_query:
+        other_user_id = msg.recipient_id if msg.sender_id == current_user.id else msg.sender_id
+        if other_user_id not in seen_ids:
+            seen_ids.add(other_user_id)
+            other_user = User.query.get(other_user_id)
+            if other_user:
+                chat_users.append({'user': other_user, 'last_message': msg})
+                
+    return render_template('messages.html', chat_users=chat_users, title="Messages")
+
+@main.route("/chat/<username>", methods=['GET', 'POST'])
+@login_required
+def chat(username):
+    from urllib.parse import unquote
+    username = unquote(username)
+    user = User.query.filter_by(username=username).first_or_404()
+    if user == current_user:
+        flash('You cannot chat with yourself.', 'warning')
+        return redirect(url_for('main.messages'))
+        
+    form = MessageForm()
+    if form.validate_on_submit():
+        msg = DBMessage(author=current_user, recipient=user, body=form.message.data)
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data, 'message_pics')
+            msg.image_file = picture_file
+        db.session.add(msg)
+        db.session.commit()
+        
+        from datetime import timedelta
+        # Send an email notification if the user is offline (not active in last 2 mins)
+        is_online = False
+        if getattr(user, 'last_seen', None):
+            if datetime.utcnow() - user.last_seen <= timedelta(minutes=2):
+                is_online = True
+                
+        if not is_online:
+            send_notification_email(user, 'New Message on Writer\'s Hub', f"You received a new message from {current_user.username}:\n\n\"{form.message.data}\"\n\nLog in to reply!")
+            
+        return redirect(url_for('main.chat', username=username))
+        
+    chat_messages = DBMessage.query.filter(
+        or_(
+            and_(DBMessage.sender_id == current_user.id, DBMessage.recipient_id == user.id),
+            and_(DBMessage.sender_id == user.id, DBMessage.recipient_id == current_user.id)
+        )
+    ).order_by(DBMessage.timestamp.asc()).all()
+    
+    # Mark messages as read
+    unread_messages = DBMessage.query.filter_by(sender_id=user.id, recipient_id=current_user.id, is_read=False).all()
+    if unread_messages:
+        for m in unread_messages:
+            m.is_read = True
+        db.session.commit()
+    
+    return render_template('chat.html', user=user, chat_messages=chat_messages, form=form, title=f"Chat with {user.username}")
+
+@main.route("/message/<int:message_id>/edit", methods=['POST'])
+@login_required
+def edit_message(message_id):
+    message = DBMessage.query.get_or_404(message_id)
+    if message.author != current_user:
+        abort(403)
+    
+    new_body = request.form.get('body')
+    if new_body and new_body.strip():
+        message.body = new_body.strip()
+        message.is_edited = True
+        db.session.commit()
+        flash('Message updated successfully.', 'success')
+    else:
+        flash('Message cannot be empty.', 'danger')
+        
+    return redirect(request.referrer or url_for('main.messages'))
+
+@main.route("/message/<int:message_id>/delete", methods=['POST'])
+@login_required
+def delete_message(message_id):
+    message = DBMessage.query.get_or_404(message_id)
+    if message.author != current_user:
+        abort(403)
+        
+    db.session.delete(message)
+    db.session.commit()
+    flash('Message deleted.', 'success')
+    return redirect(request.referrer or url_for('main.messages'))
+
+@main.route("/share_post/<int:post_id>", methods=['POST'])
+@login_required
+def share_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    recipient_username = request.form.get('recipient')
+    message_text = request.form.get('message_text', '')
+    
+    recipient = User.query.filter_by(username=recipient_username).first()
+    if not recipient:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'User not found to share with.'})
+        flash('User not found to share with.', 'danger')
+        return redirect(request.referrer or url_for('main.main_page'))
+        
+    if recipient == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'error', 'message': 'You cannot share a post with yourself.'})
+        flash('You cannot share a post with yourself.', 'warning')
+        return redirect(request.referrer or url_for('main.main_page'))
+
+    msg = DBMessage(
+        author=current_user,
+        recipient=recipient,
+        body=message_text,
+        shared_post_id=post.id
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'status': 'success'})
+        
+    flash(f'Post successfully shared with {recipient.username}!', 'success')
+    return redirect(request.referrer or url_for('main.main_page'))
+
+@main.route("/notifications/read", methods=['POST'])
+@login_required
+def read_notifications():
+    for notif in current_user.notifications.filter_by(is_read=False).all():
+        notif.is_read = True
+    db.session.commit()
+    return jsonify({"status": "success"})
