@@ -507,7 +507,8 @@ a:hover {
 }
 
 .intro-logo {
-    width: 150px;
+    width: 350px;
+    max-width: 80vw;
     height: auto;
     object-fit: contain;
     animation: zoomInIntro 2.5s ease-out forwards;
