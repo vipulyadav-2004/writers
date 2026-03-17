@@ -507,7 +507,7 @@ a:hover {
 }
 
 .intro-logo {
-    width: 350px;
+    width: 550px;
     max-width: 80vw;
     height: auto;
     object-fit: contain;
@@ -519,9 +519,11 @@ a:hover {
         transform: scale(0.5);
         opacity: 0;
     }
+
     40% {
         opacity: 1;
     }
+
     100% {
         transform: scale(1.1);
         opacity: 1;
