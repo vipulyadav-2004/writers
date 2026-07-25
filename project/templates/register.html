@@ -2,9 +2,8 @@
 
 {% block body_class %}auth-bg{% endblock %}
 
-{% block content %}
-<div class="row align-items-center justify-content-center" style="min-height: 80vh;">
-    <div class="col-md-6 col-lg-5">
+{% block auth_content %}
+<div class="col-md-6 col-lg-5">
         <div class="auth-card">
             <h2 class="auth-title">Create Account</h2>
             <form method="POST" action="" novalidate>
@@ -102,6 +101,5 @@
                 <a href="{{ url_for('main.login_page') }}" class="auth-link">Sign In</a>
             </p>
         </div>
-    </div>
 </div>
-{% endblock %}
+{% endblock auth_content %}

@@ -2,73 +2,67 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="glass-card p-0 d-flex flex-column" style="height: 75vh; max-height: 800px;">
-            <div
-                class="bg-white bg-opacity-10 border-bottom border-secondary border-opacity-25 px-4 py-3 d-flex align-items-center">
-                <a href="{{ url_for('main.messages') }}" class="btn btn-sm btn-outline-secondary me-3">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <img class="rounded-circle me-3" src="{{ get_image_url(user.image_file, 'profile_pics') }}" alt="PFP"
-                    style="width: 40px; height: 40px; object-fit: cover;">
-                <h5 class="mb-0 gradient-text"><a href="{{ url_for('main.user_posts', username=user.username) }}"
-                        class="text-decoration-none">{{ user.username }}</a></h5>
+    <div class="col-12">
+        <div class="chat-container d-flex flex-column" style="height: 78vh;">
+            <!-- Chat Header -->
+            <div class="chat-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('main.messages') }}" class="btn btn-sm btn-secondary me-3 p-1 px-2">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    <img class="rounded-circle me-3 border" src="{{ get_image_url(user.image_file, 'profile_pics') }}" alt="PFP" style="width: 38px; height: 38px; object-fit: cover; border-color: var(--border-color) !important;">
+                    <h5 class="mb-0 text-white fw-bold" style="font-size: 1.05rem;">
+                        <a href="{{ url_for('main.user_posts', username=user.username) }}" class="text-decoration-none text-white">@{{ user.username }}</a>
+                    </h5>
+                </div>
             </div>
 
-            <div class="flex-grow-1 overflow-auto p-4 d-flex flex-column" id="chat-messages">
+            <!-- Messages Window -->
+            <div class="flex-grow-1 overflow-auto p-4 d-flex flex-column" id="chat-messages" style="background: rgba(0,0,0,0.1);">
                 {% if chat_messages %}
                 {% for message in chat_messages %}
-                <div
-                    class="mb-3 d-flex flex-column {% if message.sender_id == current_user.id %}align-items-end{% else %}align-items-start{% endif %}">
-                    <div
-                        class="d-flex align-items-center {% if message.sender_id == current_user.id %}flex-row-reverse{% endif %}">
-                        <div class="p-3 shadow-sm rounded-4 {% if message.sender_id == current_user.id %}bg-primary text-white ms-2{% else %}bg-body-tertiary me-2{% endif %}"
-                            style="max-width: 85%;">
+                <div class="mb-3 d-flex flex-column {% if message.sender_id == current_user.id %}align-items-end{% else %}align-items-start{% endif %}">
+                    <div class="d-flex align-items-center {% if message.sender_id == current_user.id %}flex-row-reverse{% endif %}">
+                        <!-- Message Bubble -->
+                        <div class="chat-bubble {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %} p-3 shadow-sm">
                             {% if message.image_file %}
-                            <img src="{{ get_image_url(message.image_file, 'message_pics') }}"
-                                class="img-fluid rounded mb-2" style="max-height: 250px;">
+                            <div class="mb-2 text-center bg-black bg-opacity-25 rounded" style="overflow: hidden; max-height: 250px;">
+                                <img src="{{ get_image_url(message.image_file, 'message_pics') }}" class="img-fluid" style="max-height: 250px; object-fit: contain;">
+                            </div>
                             {% endif %}
+                            
                             {% if message.shared_post %}
-                            <div class="card mb-2 {% if message.sender_id == current_user.id %}bg-light text-dark{% else %}bg-white text-dark{% endif %}"
-                                style="border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                                <div class="card-body p-2 d-flex flex-column align-items-start text-start">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <img class="rounded-circle me-2"
-                                            src="{{ get_image_url(message.shared_post.author.image_file, 'profile_pics') }}"
-                                            style="width: 20px; height: 20px; object-fit: cover;">
-                                        <span class="small fw-bold">{{ message.shared_post.author.username }}</span>
+                            <div class="card mb-2 text-dark bg-white border-0" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: var(--radius-sm) !important;">
+                                <div class="card-body p-2.5 d-flex flex-column align-items-start text-start">
+                                    <div class="d-flex align-items-center mb-1.5">
+                                        <img class="rounded-circle me-1.5 border" src="{{ get_image_url(message.shared_post.author.image_file, 'profile_pics') }}" style="width: 18px; height: 18px; object-fit: cover;">
+                                        <span class="fw-bold" style="font-size: 0.75rem; color: #1e293b;">@{{ message.shared_post.author.username }}</span>
                                     </div>
-                                    <h6 class="card-title fw-bold mb-1 text-truncate" style="max-width: 100%;">{{
-                                        message.shared_post.title }}</h6>
-                                    <a href="{{ url_for('main.user_posts', username=message.shared_post.author.username) }}"
-                                        class="btn btn-sm btn-outline-primary mt-1" style="font-size: 0.75rem;">View
-                                        Post</a>
+                                    <h6 class="card-title fw-bold mb-2 text-truncate w-100" style="font-size: 0.85rem; color: #0f172a; max-width: 180px;">{{ message.shared_post.title }}</h6>
+                                    <a href="{{ url_for('main.user_posts', username=message.shared_post.author.username) }}#post-{{ message.shared_post.id }}" class="btn btn-primary btn-sm w-100 py-1" style="font-size: 0.7rem;">View Story</a>
                                 </div>
                             </div>
                             {% endif %}
+                            
                             {% if message.body %}
-                            {{ message.body }}
+                            <span style="word-break: break-word;">{{ message.body }}</span>
                             {% endif %}
+                            
                             {% if message.is_edited %}
-                            <small
-                                class="{% if message.sender_id == current_user.id %}text-white-50{% else %}text-muted{% endif %} ms-2"
-                                style="font-size: 0.65rem;">(edited)</small>
+                            <small class="{% if message.sender_id == current_user.id %}text-indigo-200 opacity-75{% else %}text-muted{% endif %} ms-2" style="font-size: 0.6rem;">(edited)</small>
                             {% endif %}
                         </div>
 
+                        <!-- Dropdown Options for Sender -->
                         {% if message.sender_id == current_user.id %}
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-link text-muted p-0 border-0 ms-1 me-1 shadow-none"
-                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-sm btn-link text-muted p-1 border-0 ms-1 me-1 shadow-none opacity-50" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="min-width: 100px;">
-                                <li><a class="dropdown-item small msg-edit-btn" href="#" data-msgid="{{ message.id }}"
-                                        data-body="{{ message.body|e }}"
-                                        onclick="editMessage(this.dataset.msgid, this.dataset.body)">Edit</a></li>
+                                <li><a class="dropdown-item small msg-edit-btn" href="#" data-msgid="{{ message.id }}" data-body="{{ message.body|e }}" onclick="editMessage(this.dataset.msgid, this.dataset.body)">Edit</a></li>
                                 <li>
-                                    <form action="{{ url_for('main.delete_message', message_id=message.id) }}"
-                                        method="POST" onsubmit="return confirm('Delete this message?');">
+                                    <form action="{{ url_for('main.delete_message', message_id=message.id) }}" method="POST" onsubmit="return confirm('Delete this message?');">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                         <button type="submit" class="dropdown-item small text-danger">Delete</button>
                                     </form>
@@ -78,14 +72,14 @@
                         {% endif %}
                     </div>
 
-                    <small class="text-muted mt-1 px-1 message-time"
-                        data-timestamp="{{ message.timestamp.isoformat() }}Z" style="font-size: 0.7rem;">
+                    <!-- Meta Data Time -->
+                    <small class="text-muted mt-1 px-1 message-time d-flex align-items-center gap-1" data-timestamp="{{ message.timestamp.isoformat() }}Z" style="font-size: 0.65rem;">
                         {{ message.timestamp.strftime('%H:%M • %b %d') }}
                         {% if message.sender_id == current_user.id %}
                         {% if message.is_read %}
-                        <i class="bi bi-check2-all text-primary ms-1" style="font-size: 0.85rem;" title="Seen"></i>
+                        <i class="bi bi-check2-all text-primary" style="font-size: 0.8rem;" title="Seen"></i>
                         {% else %}
-                        <i class="bi bi-check2 ms-1" style="font-size: 0.85rem;" title="Delivered"></i>
+                        <i class="bi bi-check2" style="font-size: 0.8rem;" title="Delivered"></i>
                         {% endif %}
                         {% endif %}
                     </small>
@@ -93,26 +87,24 @@
                 {% endfor %}
                 {% else %}
                 <div class="text-center text-muted my-auto">
-                    <p>No messages here yet. Say hi!</p>
+                    <i class="bi bi-chat-dots fs-1 mb-2 text-muted opacity-25"></i>
+                    <p class="small">No messages here yet. Say hi!</p>
                 </div>
                 {% endif %}
             </div>
 
-            <div class="bg-white bg-opacity-10 border-top border-secondary border-opacity-25 p-3">
+            <!-- Input Form Bar -->
+            <div class="chat-input-bar p-3">
                 <form id="chat-form" method="POST" action="" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
-                    <div class="input-group">
-                        <label class="btn btn-secondary rounded-start-pill d-flex align-items-center mb-0 px-3"
-                            style="cursor: pointer;">
-                            <i class="bi bi-image"></i>
-                            {{ form.picture(style="display: none;", id="picture-upload",
-                            onchange="updateFileName(this)") }}
+                    <div class="input-group input-group-sm">
+                        <label class="btn btn-secondary d-flex align-items-center mb-0 px-3" style="cursor: pointer; border-radius: var(--radius-md) 0 0 var(--radius-md) !important; border: 1px solid var(--border-color) !important;">
+                            <i class="bi bi-image text-white"></i>
+                            {{ form.picture(style="display: none;", id="picture-upload", onchange="updateFileName(this)") }}
                         </label>
-                        {{ form.message(id="chat-message-input", class="form-control bg-light text-dark shadow-none
-                        border-0 ps-3",
-                        placeholder="Type a message...", rows="1", style="resize:none;") }}
-                        <button id="chat-submit-btn" class="btn btn-primary rounded-end-pill px-4" type="submit">
-                            <i class="bi bi-send-fill"></i> Send
+                        {{ form.message(id="chat-message-input", class="form-control shadow-none border-0 ps-3", placeholder="Type a message...", rows="1", style="resize:none; border-radius: 0 !important; background: rgba(0,0,0,0.3) !important;") }}
+                        <button id="chat-submit-btn" class="btn btn-primary px-4" type="submit" style="border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;">
+                            <i class="bi bi-send-fill me-1"></i> Send
                         </button>
                     </div>
                     <div id="file-name-display" class="small text-muted ms-3 mt-1" style="display: none;"></div>
@@ -134,7 +126,7 @@
 
 <!-- Edit Message Modal -->
 <div class="modal fade" id="editMessageModal" tabindex="-1" aria-labelledby="editMessageModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editMessageModalLabel">Edit Message</h5>
@@ -143,12 +135,11 @@
             <form id="editMessageForm" method="POST" action="">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <div class="modal-body">
-                    <textarea class="form-control bg-light text-dark" name="body" id="editMessageBody" rows="3"
-                        required></textarea>
+                    <textarea class="form-control" name="body" id="editMessageBody" rows="3" required></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <button type="submit" class="btn btn-primary px-3">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -163,7 +154,6 @@
         editModal.show();
     }
 
-    // Convert timestamps to local time and Auto-scroll
     document.addEventListener("DOMContentLoaded", function () {
         var chatBox = document.getElementById("chat-messages");
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -171,7 +161,6 @@
         document.querySelectorAll('.message-time').forEach(el => {
             const d = new Date(el.dataset.timestamp);
             if (!isNaN(d)) {
-                // Keep the checkmark icon if it exists inside the element
                 let iconHtml = "";
                 const iconMatch = el.innerHTML.match(/<i[^>]+><\/i>/i);
                 if (iconMatch) {
@@ -182,7 +171,6 @@
             }
         });
 
-        // Handle Enter for submission and Shift+Enter for new line
         var msgInput = document.getElementById("chat-message-input");
         var chatForm = document.getElementById("chat-form");
         var submitBtn = document.getElementById("chat-submit-btn");
@@ -191,13 +179,11 @@
             msgInput.addEventListener("keydown", function (e) {
                 if (e.key === "Enter") {
                     if (e.shiftKey) {
-                        // Allow new line
                         return;
                     } else {
-                        // Prevent new line and submit form
                         e.preventDefault();
                         if (msgInput.value.trim() !== "" || document.getElementById('picture-upload').files.length > 0) {
-                            submitBtn.disabled = true; // Prevent double submission
+                            submitBtn.disabled = true;
                             chatForm.submit();
                         }
                     }

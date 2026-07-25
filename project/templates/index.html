@@ -2,123 +2,121 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-10 col-lg-8 mx-auto">
+    <div class="col-12">
 
         {% if user %}
-        <div class="glass-card text-center py-4 mb-4">
-            <h2 class="auth-title mb-3">Profile</h2>
+        <!-- Profile Header Block -->
+        <div class="glass-card text-center py-4 mb-4" style="background: var(--bg-card); border: 1px solid var(--border-color);">
             <div class="mb-3">
-                <img class="rounded-circle account-img mb-2" src="{{ get_image_url(user.image_file, 'profile_pics') }}"
-                    alt="User Profile Picture" style="width: 120px; height: 120px; object-fit: cover;">
+                <div class="profile-avatar-wrapper mb-3">
+                    <img class="profile-avatar-img" src="{{ get_image_url(user.image_file, 'profile_pics') }}" alt="User Profile Picture">
+                </div>
                 <h3 class="gradient-text mb-1">{{ user.username }}</h3>
+                
                 {% if user.email == 'vipulyadav0709@gmail.com' %}
                 <div class="mb-2 mt-1">
-                    <span class="badge rounded-pill px-3 py-2"
-                        style="background: linear-gradient(135deg, #FFD700, #F7931A); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); border: 1px solid rgba(255,255,255,0.4); color: #000; display: inline-flex; align-items: center;">
-                        <i class="bi bi-patch-check-fill me-2" style="font-size: 1.1rem;"></i>
-                        <span class="fw-bold fs-6">Owner & Developer</span>
+                    <span class="badge rounded-pill px-3 py-1.5" style="background: linear-gradient(135deg, #FFD700, #F7931A); box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25); border: 1px solid rgba(255,255,255,0.3); color: #000; font-size: 0.75rem; font-weight: bold;">
+                        <i class="bi bi-patch-check-fill me-1"></i> Owner & Developer
                     </span>
                 </div>
                 {% endif %}
-                <p class="text-muted small">{{ user.email }}</p>
-                <div class="d-flex justify-content-center gap-4 mt-3">
+                
+                <p class="text-muted small mb-3">{{ user.email }}</p>
+                
+                <div class="d-flex justify-content-center gap-4 my-3 py-2 border-top border-bottom border-secondary border-opacity-10" style="max-width: 320px; margin: 0 auto;">
                     <div class="text-center">
-                        <strong class="d-block text-white">{{ user.posts|length }}</strong>
+                        <strong class="d-block text-white fs-5">{{ user.posts|length }}</strong>
                         <span class="text-muted small">Posts</span>
                     </div>
-                    <a href="{{ url_for('main.followers', username=user.username) }}" class="text-decoration-none"
-                        style="color: inherit;">
+                    <a href="{{ url_for('main.followers', username=user.username) }}" class="text-decoration-none" style="color: inherit;">
                         <div class="text-center">
-                            <strong class="d-block text-white">{{ user.followers.count() }}</strong>
+                            <strong class="d-block text-white fs-5">{{ user.followers.count() }}</strong>
                             <span class="text-muted small">Followers</span>
                         </div>
                     </a>
-                    <a href="{{ url_for('main.following', username=user.username) }}" class="text-decoration-none"
-                        style="color: inherit;">
+                    <a href="{{ url_for('main.following', username=user.username) }}" class="text-decoration-none" style="color: inherit;">
                         <div class="text-center">
-                            <strong class="d-block text-white">{{ user.followed.count() }}</strong>
+                            <strong class="d-block text-white fs-5">{{ user.followed.count() }}</strong>
                             <span class="text-muted small">Following</span>
                         </div>
                     </a>
                 </div>
             </div>
+            
             {% if not current_user.is_authenticated or current_user.username != user.username %}
-            <div class="mt-4 d-flex flex-wrap justify-content-center align-items-stretch gap-2">
+            <div class="mt-3 d-flex flex-wrap justify-content-center align-items-stretch gap-2" style="max-width: 360px; margin: 0 auto;">
                 {% if current_user.is_authenticated and current_user.is_following(user) %}
-                <form action="{{ url_for('main.unfollow', username=user.username) }}" method="POST"
-                    class="m-0 flex-grow-1" style="min-width: 110px;">
+                <form action="{{ url_for('main.unfollow', username=user.username) }}" method="POST" class="m-0 flex-grow-1">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit"
-                        class="btn btn-secondary w-100 h-100 d-flex align-items-center justify-content-center py-2 h6 mb-0">Unfollow</button>
+                    <button type="submit" class="btn btn-secondary btn-sm w-100 py-2">Unfollow</button>
                 </form>
                 {% else %}
-                <form action="{{ url_for('main.follow', username=user.username) }}" method="POST"
-                    class="m-0 flex-grow-1" style="min-width: 110px;">
+                <form action="{{ url_for('main.follow', username=user.username) }}" method="POST" class="m-0 flex-grow-1">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit"
-                        class="btn btn-auth w-100 h-100 d-flex align-items-center justify-content-center py-2 h6 mb-0">Follow</button>
+                    <button type="submit" class="btn btn-primary btn-sm w-100 py-2">Follow</button>
                 </form>
                 {% endif %}
-                <a href="{{ url_for('main.chat', username=user.username) }}"
-                    class="btn btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center py-2 h6 mb-0"
-                    style="min-width: 110px;">Message</a>
+                <a href="{{ url_for('main.chat', username=user.username) }}" class="btn btn-outline-primary btn-sm flex-grow-1 py-2">Message</a>
 
                 {% if current_user.is_developer %}
-                <form action="{{ url_for('main.admin_delete_user', user_id=user.id) }}" method="POST"
-                    onsubmit="return confirm('WARNING: Are you sure you want to completely delete {{ user.username }}\'s account?');"
-                    class="m-0 flex-grow-1 mt-1 mt-sm-0" style="min-width: 110px;">
+                <form action="{{ url_for('main.admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Are you sure you want to completely delete {{ user.username }}\'s account?');" class="m-0 flex-grow-1 w-100 mt-2">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit"
-                        class="btn btn-danger w-100 h-100 d-flex align-items-center justify-content-center py-2 h6 mb-0">Delete
-                        Account</button>
+                    <button type="submit" class="btn btn-danger btn-sm w-100 py-2">Delete Account</button>
                 </form>
                 {% endif %}
             </div>
             {% endif %}
         </div>
+        
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="gradient-text">Recent Posts</h4>
+            <h4 class="gradient-text mb-0">Recent Stories</h4>
         </div>
         {% else %}
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="gradient-text">{{ title|default("Writer's Feed") }}</h1>
-            <a href="{{ url_for('main.create_post') }}" class="btn btn-success">Write New Content</a>
+            <h3 class="gradient-text mb-0">{{ title|default("Writer's Feed") }}</h3>
+            <a href="{{ url_for('main.create_post') }}" class="btn btn-sm btn-success d-flex align-items-center gap-2"><i class="bi bi-pencil-square"></i> Write Story</a>
         </div>
         {% endif %}
 
+        <!-- Posts List -->
         {% if posts %}
         {% for post in posts %}
         <a id="post-{{ post.id }}"></a>
-        <div class="glass-card mb-4">
-            <h2 class="h4 fw-bold mb-1">{{ post.title }}</h2>
-            <p class="text-muted small mb-3">
-                Posted by:
-                <img class="rounded-circle mb-1 me-1" src="{{ get_image_url(post.author.image_file, 'profile_pics') }}"
-                    alt="PFP" style="width: 25px; height: 25px; object-fit: cover;">
-                <a href="{{ url_for('main.user_posts', username=post.author.username) }}"
-                    class="text-decoration-none text-dark"><strong>{{ post.author.username }}</strong></a>
+        <div class="glass-card mb-4" style="background: var(--bg-card); border: 1px solid var(--border-color);">
+            <!-- Author Header Row -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                    <img class="rounded-circle me-2 border border-secondary" src="{{ get_image_url(post.author.image_file, 'profile_pics') }}" alt="PFP" style="width: 32px; height: 32px; object-fit: cover;">
+                    <div style="line-height: 1.2;">
+                        <a href="{{ url_for('main.user_posts', username=post.author.username) }}" class="post-author-link text-decoration-none text-white small d-block"><strong>{{ post.author.username }}</strong></a>
+                        <span class="text-muted" style="font-size: 0.7rem;">{{ post.timestamp.strftime('%B %d, %Y') }}</span>
+                    </div>
+                </div>
+                
                 {% if not current_user.is_authenticated or (current_user != post.author and not current_user.is_following(post.author)) %}
-            <form action="{{ url_for('main.follow', username=post.author.username) }}" method="POST"
-                class="d-inline ms-1 me-1">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <button type="submit" class="badge rounded-pill border-0 shadow-sm px-2 py-1"
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; font-size: 0.65rem;">Follow</button>
-            </form>
-            {% endif %}
-            <span class="ms-1">on {{ post.timestamp.strftime('%B %d, %Y') }}</span>
-            </p>
+                <form action="{{ url_for('main.follow', username=post.author.username) }}" method="POST" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary py-0.5 px-2.5" style="font-size: 0.7rem; border-radius: 99px;">Follow</button>
+                </form>
+                {% endif %}
+            </div>
+
+            <!-- Post Title -->
+            <h2 class="post-title mb-2 text-white">{{ post.title }}</h2>
+
             {% if post.image_file %}
-            <img src="{{ get_image_url(post.image_file, 'post_pics') }}" alt="Post Image" class="img-fluid rounded mb-3"
-                style="max-height: 400px; width: 100%; object-fit: contain;">
+            <div class="mb-3 text-center bg-black bg-opacity-20 rounded" style="overflow: hidden; max-height: 400px;">
+                <img src="{{ get_image_url(post.image_file, 'post_pics') }}" alt="Post Image" class="img-fluid" style="max-height: 400px; width: 100%; object-fit: contain;">
+            </div>
             {% endif %}
-            <hr class="divider my-3">
+
             <div class="post-content-container">
-                <p class="post-body post-body-content mb-1"
-                    style="white-space: pre-wrap; display: -webkit-box; -webkit-box-orient: vertical; line-clamp: 10; -webkit-line-clamp: 10; overflow: hidden; word-break: break-word;">
+                <p class="post-body post-body-content mb-1 text-secondary" style="white-space: pre-wrap; display: -webkit-box; -webkit-box-orient: vertical; line-clamp: 10; -webkit-line-clamp: 10; overflow: hidden; word-break: break-word; font-size: 0.95rem;">
                     {{- post.body -}}</p>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-3">
+            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 pt-2 border-top border-secondary border-opacity-10">
+                <!-- Action Buttons Group -->
                 <div class="d-flex gap-2">
                     <form action="{{ url_for('main.like_post', post_id=post.id) }}" method="POST" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -126,78 +124,74 @@
                         {% if current_user.is_authenticated %}
                         {% set user_liked = post.likes.filter_by(user_id=current_user.id).first() %}
                         {% endif %}
-                        <button type="submit" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
+                        <button type="submit" class="post-action-btn">
                             {% if user_liked %}
-                            <i class="bi bi-heart-fill text-danger"></i>
+                            <i class="bi bi-heart-fill"></i>
                             {% else %}
                             <i class="bi bi-heart"></i>
                             {% endif %}
-                            <span class="badge bg-secondary text-white ms-1">{{ post.likes.count() }}</span>
+                            <span class="badge bg-secondary text-white">{{ post.likes.count() }}</span>
                         </button>
                     </form>
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2"
-                        data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
-                        <i class="bi bi-chat-text"></i> <span class="badge bg-secondary text-white ms-1">{{
-                            post.comments.count() }}</span>
+                    
+                    <button class="post-action-btn" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+                        <i class="bi bi-chat-text"></i>
+                        <span class="badge bg-secondary text-white">{{ post.comments.count() }}</span>
                     </button>
+                    
                     <form action="{{ url_for('main.save_post', post_id=post.id) }}" method="POST" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         {% set user_saved = False %}
                         {% if current_user.is_authenticated %}
                         {% set user_saved = post.saved_by.filter_by(user_id=current_user.id).first() %}
                         {% endif %}
-                        <button type="submit" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
+                        <button type="submit" class="post-action-btn">
                             {% if user_saved %}
-                            <i class="bi bi-bookmark-fill text-warning"></i>
+                            <i class="bi bi-bookmark-fill"></i>
                             {% else %}
                             <i class="bi bi-bookmark"></i>
                             {% endif %}
                         </button>
                     </form>
+                    
                     <div class="dropdown d-inline">
-                        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="post-action-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-share"></i>
                         </button>
                         <ul class="dropdown-menu shadow">
-                            <li><button class="dropdown-item"
-                                    onclick="navigator.clipboard.writeText(`{{ url_for('main.user_posts', username=post.author.username, _external=True) }}#post-{{ post.id }}`); alert('Post URL copied to clipboard!');"><i
-                                        class="bi bi-link-45deg me-2"></i>Copy Link</button></li>
+                            <li><button class="dropdown-item" onclick="navigator.clipboard.writeText(`{{ url_for('main.user_posts', username=post.author.username, _external=True) }}#post-{{ post.id }}`); alert('Post URL copied!');"><i class="bi bi-link-45deg me-2"></i>Copy Link</button></li>
                             {% if current_user.is_authenticated %}
-                            <li><button class="dropdown-item" data-bs-toggle="modal"
-                                    data-bs-target="#shareModal{{ post.id }}"><i class="bi bi-send me-2"></i>Send in Message</button></li>
+                            <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#shareModal{{ post.id }}"><i class="bi bi-send me-2"></i>Send in Chat</button></li>
                             {% else %}
-                            <li><a class="dropdown-item" href="{{ url_for('main.login_page') }}"><i class="bi bi-send me-2"></i>Send in Message</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.login_page') }}"><i class="bi bi-send me-2"></i>Send in Chat</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="https://twitter.com/intent/tweet?text={{ post.title | urlencode }}&url={{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-twitter me-2" style="color: #1DA1F2;"></i>Twitter</a></li>
                             <li><a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-facebook me-2" style="color: #1877F2;"></i>Facebook</a></li>
                             <li><a class="dropdown-item" href="https://api.whatsapp.com/send?text={{ post.title | urlencode }}%20{{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-whatsapp me-2" style="color: #25D366;"></i>WhatsApp</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="navigator.clipboard.writeText(`{{ url_for('main.user_posts', username=post.author.username, _external=True) }}#post-{{ post.id }}`); alert('Link copied! Open Instagram to paste and share.'); window.open('https://instagram.com', '_blank');"><i class="bi bi-instagram me-2" style="color: #E1306C;"></i>Instagram</a></li>
                         </ul>
                     </div>
                 </div>
 
+                <!-- Tags / Attribution Group -->
                 <div class="d-flex align-items-center flex-wrap gap-2 text-end">
                     {% if post.author == current_user or current_user.is_developer %}
-                    <a href="{{ url_for('main.update_post', post_id=post.id) }}"
-                        class="btn btn-sm btn-secondary">Edit</a>
-                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#deleteModal{{ post.id }}">Delete</button>
+                    <a href="{{ url_for('main.update_post', post_id=post.id) }}" class="btn btn-sm btn-secondary py-1 px-2.5" style="font-size: 0.75rem;">Edit</a>
+                    <button type="button" class="btn btn-danger btn-sm py-1 px-2.5" data-bs-toggle="modal" data-bs-target="#deleteModal{{ post.id }}" style="font-size: 0.75rem;">Delete</button>
                     {% endif %}
 
-                    <span class="badge bg-light text-dark py-2 px-3 border ms-lg-2">
-                        <span class="text-muted">Written by:</span> {{ post.author_name }}
+                    {% if post.author_name %}
+                    <span class="badge bg-light text-dark py-1 px-2 border" style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">
+                        Attr: {{ post.author_name }}
                     </span>
+                    {% endif %}
+                    
                     {% if post.tags %}
-                    <div class="d-flex flex-wrap gap-1 ms-1">
+                    <div class="d-flex flex-wrap gap-1">
                         {% for tag in post.tags.split(',') %}
                         {% set tag = tag.strip() %}
                         {% if tag %}
-                        <a href="{{ url_for('main.search', q=tag) }}"
-                            class="badge rounded-pill text-decoration-none shadow-sm"
-                            style="background-color: var(--accent-color, #a855f7); color: white; opacity: 0.9; font-size: 0.75rem;">#{{
-                            tag }}</a>
+                        <a href="{{ url_for('main.search', q=tag) }}" class="badge-tag">#{{ tag }}</a>
                         {% endif %}
                         {% endfor %}
                     </div>
@@ -205,55 +199,63 @@
                 </div>
             </div>
 
-            <!-- Comments Section -->
+            <!-- Comments Expansion Section -->
             <div class="collapse mt-3" id="comments-{{ post.id }}">
-                <hr class="divider">
-                <h5 class="mb-3">Comments</h5>
-                <form action="{{ url_for('main.comment_post', post_id=post.id) }}" method="POST" class="mb-4">
+                <hr class="divider my-3">
+                <h6 class="mb-3 text-white fw-bold">Comments</h6>
+                
+                {% if current_user.is_authenticated %}
+                <form action="{{ url_for('main.comment_post', post_id=post.id) }}" method="POST" class="mb-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="input-group">
+                    <div class="input-group input-group-sm">
                         <input type="text" name="body" class="form-control" placeholder="Write a comment..." required>
-                        <button class="btn btn-primary" type="submit">Post</button>
+                        <button class="btn btn-primary px-3" type="submit">Post</button>
                     </div>
                 </form>
-                <div class="comments-list">
+                {% endif %}
+                
+                <div class="comments-list d-flex flex-column gap-3">
                     {% for comment in post.comments %}
                     {% if not comment.parent_id %}
-                    <div class="d-flex mb-3">
-                        <img src="{{ get_image_url(comment.author.image_file, 'profile_pics') }}"
-                            class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
+                    <div class="d-flex align-items-start gap-2">
+                        <img src="{{ get_image_url(comment.author.image_file, 'profile_pics') }}" class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover;">
                         <div class="flex-grow-1">
-                            <div class="glass-card p-3 m-0"
-                                style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
+                            <div class="p-2.5 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong>{{ comment.author.username }}</strong>
-                                    <small class="text-muted">{{ comment.timestamp.strftime('%b %d, %H:%M') }}</small>
+                                    <strong class="small text-white">@{{ comment.author.username }}</strong>
+                                    <small class="text-muted" style="font-size: 0.65rem;">{{ comment.timestamp.strftime('%b %d, %H:%M') }}</small>
                                 </div>
-                                <p class="mb-0 small text-white">{{ comment.body }}</p>
-                                <div class="mt-2 text-end">
-                                    <button class="btn btn-sm btn-link text-white p-0 text-decoration-none opacity-75" style="font-size: 0.75rem" onclick="document.getElementById('reply-form-{{ comment.id }}').classList.toggle('d-none');">Reply</button>
+                                <p class="mb-0 small text-secondary">{{ comment.body }}</p>
+                                {% if current_user.is_authenticated %}
+                                <div class="mt-1 text-end">
+                                    <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 0.7rem; font-weight: bold;" onclick="document.getElementById('reply-form-{{ comment.id }}').classList.toggle('d-none');">Reply</button>
                                 </div>
+                                {% endif %}
                             </div>
-                            <!-- Reply form -->
+                            
+                            {% if current_user.is_authenticated %}
+                            <!-- Reply inline form -->
                             <form action="{{ url_for('main.comment_post', post_id=post.id) }}" method="POST" class="mt-2 d-none" id="reply-form-{{ comment.id }}" data-prevent-loader="true">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                 <input type="hidden" name="parent_id" value="{{ comment.id }}" />
                                 <div class="input-group input-group-sm mb-2">
-                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required>
                                     <button class="btn btn-primary" type="submit">Reply</button>
                                 </div>
                             </form>
-                            <!-- Nested Replies -->
-                            <div class="replies-list mt-2 ms-4" id="replies-{{ comment.id }}">
+                            {% endif %}
+                            
+                            <!-- Nested Replies List -->
+                            <div class="replies-list mt-2 ms-4 border-start border-secondary border-opacity-25 ps-2" id="replies-{{ comment.id }}">
                                 {% for reply in comment.replies %}
-                                <div class="d-flex mb-2">
-                                    <img src="{{ get_image_url(reply.author.image_file, 'profile_pics') }}" class="rounded-circle me-2 mt-1" style="width: 24px; height: 24px; object-fit: cover;">
-                                    <div class="glass-card flex-grow-1 p-2 m-0" style="border-radius: 0.75rem; box-shadow: none; background: rgba(0,0,0,0.05);">
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <img src="{{ get_image_url(reply.author.image_file, 'profile_pics') }}" class="rounded-circle border" style="width: 20px; height: 20px; object-fit: cover;">
+                                    <div class="flex-grow-1 p-2 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <strong>{{ reply.author.username }}</strong>
-                                            <small class="text-muted" style="font-size: 0.65rem;">{{ reply.timestamp.strftime('%b %d, %H:%M') }}</small>
+                                            <strong class="text-white" style="font-size: 0.75rem;">@{{ reply.author.username }}</strong>
+                                            <small class="text-muted" style="font-size: 0.6rem;">{{ reply.timestamp.strftime('%b %d, %H:%M') }}</small>
                                         </div>
-                                        <p class="mb-0 small text-white">{{ reply.body }}</p>
+                                        <p class="mb-0 text-secondary" style="font-size: 0.75rem;">{{ reply.body }}</p>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -262,24 +264,22 @@
                     </div>
                     {% endif %}
                     {% else %}
-                    <p class="text-muted small">No comments yet. Be the first to comment!</p>
+                    <p class="text-muted small mb-0 text-center py-2">No comments yet.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Delete Modal (Placed immediately after the card for context, but ideally should be top-level if possible, 
-             however, unique IDs make this safe enough if z-index is handled correctly by Bootstrap) -->
+        <!-- Delete Modal -->
         {% if post.author == current_user or current_user.is_developer %}
-        <div class="modal fade" id="deleteModal{{ post.id }}" tabindex="-1"
-            aria-labelledby="deleteModalLabel{{ post.id }}" aria-hidden="true">
-            <div class="modal-dialog">
+        <div class="modal fade" id="deleteModal{{ post.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ post.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="deleteModalLabel{{ post.id }}">Delete Post?</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body text-secondary">
                         Are you sure you want to delete this post? This action cannot be undone.
                     </div>
                     <div class="modal-footer">
@@ -296,87 +296,61 @@
 
         <!-- Share Modal -->
         {% if current_user.is_authenticated %}
-        <div class="modal fade" id="shareModal{{ post.id }}" tabindex="-1"
-            aria-labelledby="shareModalLabel{{ post.id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content glass-card border-0" style="background: rgba(30, 41, 59, 0.95);">
-                    <div class="modal-header border-bottom border-secondary border-opacity-25">
-                        <h5 class="modal-title gradient-text" id="shareModalLabel{{ post.id }}">Share Post</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+        <div class="modal fade" id="shareModal{{ post.id }}" tabindex="-1" aria-labelledby="shareModalLabel{{ post.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-white" id="shareModalLabel{{ post.id }}">Share Story</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form action="{{ url_for('main.share_post', post_id=post.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label text-white">Share With:</label>
-                                <div class="d-flex flex-column gap-2 overflow-auto custom-scrollbar"
-                                    style="max-height: 200px; padding-right: 5px;">
+                                <label class="form-label text-white small fw-bold">Select Contact:</label>
+                                <div class="d-flex flex-column gap-2 overflow-auto custom-scrollbar" style="max-height: 200px; padding-right: 5px;">
                                     {% set top_users = current_user.get_top_chat_users(10) %}
                                     {% for t_user in top_users %}
                                     <div class="form-check p-0 m-0">
-                                        <input class="btn-check" type="radio" name="recipient"
-                                            id="recipient_{{ post.id }}_{{ t_user.username }}"
-                                            value="{{ t_user.username }}" required>
-                                        <label
-                                            class="btn btn-outline-light w-100 text-start d-flex align-items-center rounded-3 p-2 border-secondary"
-                                            for="recipient_{{ post.id }}_{{ t_user.username }}"
-                                            style="cursor: pointer;">
-                                            <img src="{{ get_image_url(t_user.image_file, 'profile_pics') }}"
-                                                class="rounded-circle me-3"
-                                                style="width: 35px; height: 35px; object-fit: cover;">
-                                            <span class="fw-bold">{{ t_user.username }}</span>
+                                        <input class="btn-check" type="radio" name="recipient" id="recipient_{{ post.id }}_{{ t_user.username }}" value="{{ t_user.username }}" required>
+                                        <label class="btn btn-outline-secondary w-100 text-start d-flex align-items-center rounded-3 p-2" for="recipient_{{ post.id }}_{{ t_user.username }}" style="cursor: pointer;">
+                                            <img src="{{ get_image_url(t_user.image_file, 'profile_pics') }}" class="rounded-circle me-3" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid var(--border-color);">
+                                            <span class="fw-bold small">@{{ t_user.username }}</span>
                                         </label>
                                     </div>
                                     {% endfor %}
 
                                     {% if not top_users %}
-                                    <div class="text-muted small mb-2">No recent contacts or followers found.</div>
-                                    <input type="text" class="form-control bg-dark border-secondary text-white"
-                                        name="recipient" required placeholder="Enter username manually">
+                                    <div class="text-muted small mb-2">No recent contacts found. Enter username manually:</div>
+                                    <input type="text" class="form-control" name="recipient" required placeholder="Enter username manually">
                                     {% else %}
                                     <div class="form-check p-0 m-0 mt-2">
-                                        <input class="btn-check" type="radio" name="recipient"
-                                            id="recipient_{{ post.id }}_manual_radio" value=""
-                                            onclick="document.getElementById('manual_recipient_{{ post.id }}').focus()"
-                                            required>
-                                        <label
-                                            class="btn btn-outline-light w-100 text-start rounded-3 p-2 border-secondary"
-                                            for="recipient_{{ post.id }}_manual_radio" style="cursor: pointer;">
-                                            <span class="small fw-bold mb-1 d-block">Someone else:</span>
-                                            <input type="text"
-                                                class="form-control bg-dark border-secondary text-white form-control-sm shadow-none"
-                                                id="manual_recipient_{{ post.id }}" placeholder="Enter username..."
-                                                oninput="document.getElementById('recipient_{{ post.id }}_manual_radio').value = this.value; document.getElementById('recipient_{{ post.id }}_manual_radio').checked = true;"
-                                                onclick="document.getElementById('recipient_{{ post.id }}_manual_radio').checked = true;">
+                                        <input class="btn-check" type="radio" name="recipient" id="recipient_{{ post.id }}_manual_radio" value="" onclick="document.getElementById('manual_recipient_{{ post.id }}').focus()" required>
+                                        <label class="btn btn-outline-secondary w-100 text-start rounded-3 p-2" for="recipient_{{ post.id }}_manual_radio" style="cursor: pointer;">
+                                            <span class="small fw-bold mb-1 d-block">Search user manually:</span>
+                                            <input type="text" class="form-control form-control-sm shadow-none" id="manual_recipient_{{ post.id }}" placeholder="Username..." oninput="document.getElementById('recipient_{{ post.id }}_manual_radio').value = this.value; document.getElementById('recipient_{{ post.id }}_manual_radio').checked = true;" onclick="document.getElementById('recipient_{{ post.id }}_manual_radio').checked = true;">
                                         </label>
                                     </div>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="message_text{{ post.id }}" class="form-label text-white">Add a message
-                                    (optional):</label>
-                                <textarea class="form-control bg-dark border-secondary text-white"
-                                    id="message_text{{ post.id }}" name="message_text" rows="2"
-                                    placeholder="Write something..."></textarea>
+                                <label for="message_text{{ post.id }}" class="form-label text-white small fw-bold">Message (optional):</label>
+                                <textarea class="form-control" id="message_text{{ post.id }}" name="message_text" rows="2" placeholder="Say something about this story..."></textarea>
                             </div>
-                            <div class="card bg-dark text-white border-secondary mb-2">
-                                <div class="card-body p-2 d-flex">
-                                    <img src="{{ get_image_url(post.author.image_file, 'profile_pics') }}"
-                                        class="rounded-circle me-2"
-                                        style="width: 24px; height: 24px; object-fit: cover;">
-                                    <div class="text-truncate" style="max-width: 90%;">
-                                        <div class="small fw-bold">{{ post.author.username }}</div>
-                                        <div class="small text-truncate">{{ post.title }}</div>
+                            <div class="card bg-dark bg-opacity-20 border border-secondary border-opacity-20 mb-2">
+                                <div class="card-body p-2 d-flex align-items-center">
+                                    <img src="{{ get_image_url(post.author.image_file, 'profile_pics') }}" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                    <div class="text-truncate">
+                                        <div class="small fw-bold text-white">@{{ post.author.username }}</div>
+                                        <div class="small text-muted text-truncate" style="max-width: 280px;">{{ post.title }}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-top border-secondary border-opacity-25">
-                            <button type="button" class="btn btn-outline-secondary"
-                                data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Send</button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary px-4">Send</button>
                         </div>
                     </form>
                 </div>
@@ -387,9 +361,9 @@
         {% endfor %}
         {% else %}
         <div class="glass-card text-center p-5">
-            <h3>The feed is empty.</h3>
-            <p class="text-muted">Be the first to share a masterpiece!</p>
-            <a href="{{ url_for('main.create_post') }}" class="btn btn-auth mt-3">Create Post</a>
+            <h4 class="text-white">The feed is empty.</h4>
+            <p class="text-muted small">Be the first to share a masterpiece!</p>
+            <a href="{{ url_for('main.create_post') }}" class="btn btn-primary btn-sm mt-2">Write Post</a>
         </div>
         {% endif %}
     </div>
@@ -398,7 +372,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Prevent base.html's global loader from changing button text
+    // Prevent base.html's global loader from changing button text on AJAX forms
     const forms = document.querySelectorAll('form');
     forms.forEach(f => {
         const a = f.getAttribute('action');
@@ -417,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(form);
             const submitBtn = form.querySelector('button[type="submit"]');
             
-            // Only disable briefly without text change
             if (submitBtn) submitBtn.disabled = true;
             
             try {
@@ -441,22 +414,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const icon = form.querySelector('i');
                                 const badge = form.querySelector('.badge');
                                 if (data.action === 'liked') {
-                                    icon.classList.remove('bi-heart');
-                                    icon.classList.add('bi-heart-fill', 'text-danger');
+                                    icon.className = 'bi bi-heart-fill';
                                 } else {
-                                    icon.classList.remove('bi-heart-fill', 'text-danger');
-                                    icon.classList.add('bi-heart');
+                                    icon.className = 'bi bi-heart';
                                 }
                                 if (badge) badge.textContent = data.likes_count;
                             } 
                             else if (action.includes('/save')) {
                                 const icon = form.querySelector('i');
                                 if (data.action === 'saved') {
-                                    icon.classList.remove('bi-bookmark');
-                                    icon.classList.add('bi-bookmark-fill', 'text-warning');
+                                    icon.className = 'bi bi-bookmark-fill';
                                 } else {
-                                    icon.classList.remove('bi-bookmark-fill', 'text-warning');
-                                    icon.classList.add('bi-bookmark');
+                                    icon.className = 'bi bi-bookmark';
                                 }
                             } 
                             else if (action.includes('/comment')) {
@@ -465,20 +434,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (isReply) {
                                     const repliesList = document.getElementById(`replies-${data.comment.parent_id}`);
                                     const replyHtml = `
-                                    <div class="d-flex mb-2">
-                                        <img src="${data.comment.image_url}" class="rounded-circle me-2 mt-1" style="width: 24px; height: 24px; object-fit: cover;">
-                                        <div class="glass-card flex-grow-1 p-2 m-0" style="border-radius: 0.75rem; box-shadow: none; background: rgba(0,0,0,0.05);">
+                                    <div class="d-flex align-items-start gap-2 mb-2">
+                                        <img src="${data.comment.image_url}" class="rounded-circle border" style="width: 20px; height: 20px; object-fit: cover;">
+                                        <div class="flex-grow-1 p-2 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <strong>${data.comment.username}</strong>
+                                                <strong class="text-white" style="font-size: 0.75rem;">@${data.comment.username}</strong>
                                                 <small class="text-muted" style="font-size:0.65rem;">${data.comment.timestamp}</small>
                                             </div>
-                                            <p class="mb-0 small text-white">${data.comment.body}</p>
+                                            <p class="mb-0 text-secondary" style="font-size: 0.75rem;">${data.comment.body}</p>
                                         </div>
                                     </div>`;
                                     if (repliesList) repliesList.insertAdjacentHTML('beforeend', replyHtml);
-                                    
-                                    // if it's the inline reply form, hide it
-                                    if(form.id.startsWith('reply-form-')) {
+                                    if (form.id.startsWith('reply-form-')) {
                                         form.classList.add('d-none');
                                     }
                                     form.reset();
@@ -486,28 +453,28 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const commentsList = form.closest('.collapse').querySelector('.comments-list');
                                     const csrfToken = form.querySelector('input[name="csrf_token"]') ? form.querySelector('input[name="csrf_token"]').value : '';
                                     const commentHtml = `
-                                    <div class="d-flex mb-3">
-                                        <img src="${data.comment.image_url}" class="rounded-circle me-3 mt-1" style="width: 32px; height: 32px; object-fit: cover;">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <img src="${data.comment.image_url}" class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover;">
                                         <div class="flex-grow-1">
-                                            <div class="glass-card p-3 m-0" style="border-radius: 1rem; box-shadow: none; background: rgba(0,0,0,0.1);">
+                                            <div class="p-2.5 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                                    <strong>${data.comment.username}</strong>
+                                                    <strong class="small text-white">@${data.comment.username}</strong>
                                                     <small class="text-muted">${data.comment.timestamp}</small>
                                                 </div>
-                                                <p class="mb-0 small text-white">${data.comment.body}</p>
-                                                <div class="mt-2 text-end">
-                                                    <button class="btn btn-sm btn-link text-white p-0 text-decoration-none opacity-75" style="font-size: 0.75rem" onclick="document.getElementById('reply-form-${data.comment.id}').classList.toggle('d-none');">Reply</button>
+                                                <p class="mb-0 small text-secondary">${data.comment.body}</p>
+                                                <div class="mt-1 text-end">
+                                                    <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 0.7rem; font-weight: bold;" onclick="document.getElementById('reply-form-${data.comment.id}').classList.toggle('d-none');">Reply</button>
                                                 </div>
                                             </div>
                                             <form action="${action}" method="POST" class="mt-2 d-none" id="reply-form-${data.comment.id}" data-prevent-loader="true">
                                                 <input type="hidden" name="csrf_token" value="${csrfToken}" />
                                                 <input type="hidden" name="parent_id" value="${data.comment.id}" />
                                                 <div class="input-group input-group-sm mb-2">
-                                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                                    <input type="text" name="body" class="form-control" placeholder="Write a reply..." required>
                                                     <button class="btn btn-primary" type="submit">Reply</button>
                                                 </div>
                                             </form>
-                                            <div class="replies-list mt-2 ms-4" id="replies-${data.comment.id}"></div>
+                                            <div class="replies-list mt-2 ms-4 border-start border-secondary border-opacity-25 ps-2" id="replies-${data.comment.id}"></div>
                                         </div>
                                     </div>`;
                                     
@@ -531,30 +498,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                     form.action = action.replace('/follow/', '/unfollow/');
                                     const btn = form.querySelector('button');
                                     btn.textContent = 'Unfollow';
-                                    if (btn.classList.contains('btn-auth')) {
-                                        btn.classList.replace('btn-auth', 'btn-secondary');
-                                    } else {
-                                        // Some buttons are different styled logic like the post badge
-                                        btn.textContent = 'Unfollow';
+                                    if (btn.classList.contains('btn-primary')) {
+                                        btn.classList.replace('btn-primary', 'btn-secondary');
                                     }
                                 } else {
                                     form.action = action.replace('/unfollow/', '/follow/');
                                     const btn = form.querySelector('button');
                                     btn.textContent = 'Follow';
                                     if (btn.classList.contains('btn-secondary')) {
-                                        btn.classList.replace('btn-secondary', 'btn-auth');
-                                    } else {
-                                        btn.textContent = 'Follow';
+                                        btn.classList.replace('btn-secondary', 'btn-primary');
                                     }
                                 }
                             }
                         } else {
-                            if (data.message) {
-                                alert(data.message);
-                            }
+                            if (data.message) alert(data.message);
                         }
                     } else {
-                        // Response is not JSON, might be a redirect page load (if backend unhandled error)
                         window.location.reload();
                     }
                 } else {

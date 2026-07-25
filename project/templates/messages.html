@@ -2,66 +2,51 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 mx-auto">
-        <h2 class="mb-4 gradient-text text-center">Messages</h2>
+    <div class="col-12">
+        <h3 class="mb-4 gradient-text text-center">Messages</h3>
 
         {% if chat_users %}
-        <div class="glass-card p-0 overflow-hidden">
-            <div class="list-group list-group-flush bg-transparent">
+        <div class="glass-card p-2" style="background: var(--bg-card); border: 1px solid var(--border-color);">
+            <div class="d-flex flex-column gap-2">
                 {% for chat in chat_users %}
-                <a href="{{ url_for('main.chat', username=chat.user.username) }}"
-                    class="list-group-item list-group-item-action bg-transparent border-0 py-3 px-4 text-decoration-none">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center text-truncate pe-3">
-                            <img class="rounded-circle me-3 flex-shrink-0"
-                                src="{{ get_image_url(chat.user.image_file, 'profile_pics') }}" alt="PFP"
-                                style="width: 50px; height: 50px; object-fit: cover;">
-                            <div class="text-truncate">
-                                <h5 class="mb-1 text-primary fw-bold">
-                                    {{ chat.user.username }}
-                                    {% set unread_count =
-                                    chat.user.messages_sent.filter_by(recipient_id=current_user.id,
-                                    is_read=False).count() %}
-                                    {% if unread_count > 0 %}
-                                    <span class="badge rounded-pill bg-danger ms-2" style="font-size: 0.6rem;">{{
-                                        unread_count }}</span>
-                                    {% endif %}
-                                </h5>
-                                <p
-                                    class="mb-0 text-muted small text-truncate fw-{% if unread_count > 0 %}bold text-white{% else %}normal{% endif %}">
-                                    {% if chat.last_message.sender_id == current_user.id %}
-                                    <span class="fst-italic opacity-75">You:</span>
-                                    {{ chat.last_message.body[:30] }}{% if chat.last_message.body|length > 30 %}...{%
-                                    endif %}
-                                    {% if chat.last_message.is_read %}
-                                    <i class="bi bi-check2-all text-primary ms-1" style="font-size: 0.85rem;"
-                                        title="Seen"></i>
-                                    {% else %}
-                                    <i class="bi bi-check2 text-muted ms-1" style="font-size: 0.85rem;"
-                                        title="Delivered"></i>
-                                    {% endif %}
-                                    {% else %}
-                                    {{ chat.last_message.body[:30] }}{% if chat.last_message.body|length > 30 %}...{%
-                                    endif %}
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-muted small text-nowrap flex-shrink-0">
-                            {{ chat.last_message.timestamp.strftime('%b %d, %H:%M') }}
+                <a href="{{ url_for('main.chat', username=chat.user.username) }}" class="d-flex align-items-center justify-content-between p-3 rounded-3 text-decoration-none border border-transparent" style="background: rgba(255, 255, 255, 0.01); transition: var(--transition-smooth);" onmouseover="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='var(--border-color)';" onmouseout="this.style.background='rgba(255,255,255,0.01)'; this.style.borderColor='transparent';">
+                    <div class="d-flex align-items-center text-truncate pe-3">
+                        <img class="rounded-circle me-3 flex-shrink-0 border" src="{{ get_image_url(chat.user.image_file, 'profile_pics') }}" alt="PFP" style="width: 46px; height: 46px; object-fit: cover; border-color: var(--border-color) !important;">
+                        <div class="text-truncate">
+                            <h6 class="mb-1 text-white fw-bold d-flex align-items-center">
+                                @{{ chat.user.username }}
+                                {% set unread_count = chat.user.messages_sent.filter_by(recipient_id=current_user.id, is_read=False).count() %}
+                                {% if unread_count > 0 %}
+                                <span class="badge rounded-pill bg-danger ms-2" style="font-size: 0.55rem; padding: 0.25em 0.5em;">{{ unread_count }} new</span>
+                                {% endif %}
+                            </h6>
+                            <p class="mb-0 text-muted small text-truncate fw-{% if unread_count > 0 %}bold text-white{% else %}normal{% endif %}">
+                                {% if chat.last_message.sender_id == current_user.id %}
+                                <span class="fst-italic text-secondary opacity-75">You:</span>
+                                <span class="text-secondary">{{ chat.last_message.body[:35] }}{% if chat.last_message.body|length > 35 %}...{% endif %}</span>
+                                {% if chat.last_message.is_read %}
+                                <i class="bi bi-check2-all text-primary ms-1" style="font-size: 0.8rem;" title="Seen"></i>
+                                {% else %}
+                                <i class="bi bi-check2 text-muted ms-1" style="font-size: 0.8rem;" title="Delivered"></i>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-secondary">{{ chat.last_message.body[:35] }}{% if chat.last_message.body|length > 35 %}...{% endif %}</span>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
+                    <div class="text-muted small text-nowrap flex-shrink-0" style="font-size: 0.75rem;">
+                        {{ chat.last_message.timestamp.strftime('%b %d, %H:%M') }}
+                    </div>
                 </a>
-                {% if not loop.last %}
-                <hr class="m-0 border-secondary opacity-25">
-                {% endif %}
                 {% endfor %}
             </div>
         </div>
         {% else %}
         <div class="glass-card text-center py-5">
             <h4 class="text-muted">No messages yet.</h4>
-            <p>Go to a user's profile to start a chat.</p>
+            <p class="text-muted small">Go to an explorer or writer's profile to start a chat.</p>
+            <a href="{{ url_for('main.explore_page') }}" class="btn btn-sm btn-primary mt-2">Find Writers</a>
         </div>
         {% endif %}
     </div>

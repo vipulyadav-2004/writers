@@ -5,55 +5,44 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-10 col-lg-8 mx-auto">
+    <div class="col-12">
         <!-- User Header Card -->
-        <div class="glass-card text-center py-5 mb-5">
-            <h2 class="auth-title mb-4">User Profile</h2>
+        <div class="glass-card text-center py-4 mb-4" style="background: var(--bg-card); border: 1px solid var(--border-color);">
+            <h4 class="text-white mb-4">User Profile</h4>
+            
             <form method="POST" action="" enctype="multipart/form-data" id="profile-form">
                 {{ form.hidden_tag() }}
 
                 <div class="mb-4">
-                    <div class="position-relative d-inline-block mb-3" style="width: 150px; height: 150px;">
-                        <img class="rounded-circle account-img" src="{{ image_file }}" alt="User Profile Picture"
-                            style="width: 150px; height: 150px; object-fit: cover; cursor: pointer;"
-                            data-bs-toggle="modal" data-bs-target="#profilePicModal">
+                    <!-- Profile Avatar Edit -->
+                    <div class="profile-avatar-wrapper mb-3">
+                        <img class="profile-avatar-img" src="{{ image_file }}" alt="User Profile Picture" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#profilePicModal">
 
-                        {{ form.picture(class="d-none", id="picture-input",
-                        onchange="document.getElementById('profile-form').submit();") }}
-                        <label for="picture-input"
-                            class="position-absolute bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow mb-0"
-                            style="bottom: 0px; left: 0px; width: 36px; height: 36px; cursor: pointer; border: 1px solid #ddd; z-index: 10;">
-                            <i class="bi bi-pencil-fill" style="font-size: 1rem;"></i>
+                        {{ form.picture(class="d-none", id="picture-input", onchange="document.getElementById('profile-form').submit();") }}
+                        <label for="picture-input" class="position-absolute bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow mb-0" style="bottom: 0px; left: 0px; width: 34px; height: 34px; cursor: pointer; border: 2px solid var(--bg-card); z-index: 10;" title="Edit Avatar">
+                            <i class="bi bi-pencil-fill" style="font-size: 0.85rem;"></i>
                         </label>
                     </div>
 
+                    <!-- Username & Inline Edit -->
                     <div class="d-flex justify-content-center align-items-center mb-2">
-                        <h3 class="gradient-text mb-0 me-2 {% if form.username.errors %}d-none{% endif %}"
-                            id="username-display">{{ username }}</h3>
-                        <a href="javascript:void(0);"
-                            onclick="document.getElementById('username-display').classList.add('d-none'); document.getElementById('username-edit-container').classList.remove('d-none'); this.classList.add('d-none');"
-                            class="text-secondary {% if form.username.errors %}d-none{% endif %}"
-                            id="username-edit-icon" title="Edit Username">
+                        <h3 class="gradient-text mb-0 me-2 {% if form.username.errors %}d-none{% endif %}" id="username-display">{{ username }}</h3>
+                        <a href="javascript:void(0);" onclick="document.getElementById('username-display').classList.add('d-none'); document.getElementById('username-edit-container').classList.remove('d-none'); this.classList.add('d-none');" class="text-secondary {% if form.username.errors %}d-none{% endif %}" id="username-edit-icon" title="Edit Username">
                             <i class="bi bi-pencil-fill"></i>
                         </a>
                     </div>
 
-                    <div id="username-edit-container"
-                        class="mb-3 d-flex justify-content-center align-items-center mx-auto {% if not form.username.errors %}d-none{% endif %}"
-                        style="max-width: 300px;">
-                        {{ form.username(class="form-control form-control-sm me-2" + (" is-invalid" if
-                        form.username.errors else "")) }}
-                        <button type="submit" class="btn btn-sm btn-success">Save</button>
-                        <button type="button" class="btn btn-sm btn-secondary ms-1"
-                            onclick="document.getElementById('username-edit-container').classList.add('d-none'); document.getElementById('username-display').classList.remove('d-none'); document.getElementById('username-edit-icon').classList.remove('d-none');">Cancel</button>
+                    <!-- Username Edit Container (Hidden by default) -->
+                    <div id="username-edit-container" class="mb-3 d-flex justify-content-center align-items-center mx-auto {% if not form.username.errors %}d-none{% endif %}" style="max-width: 300px;">
+                        {{ form.username(class="form-control form-control-sm me-2" + (" is-invalid" if form.username.errors else "")) }}
+                        <button type="submit" class="btn btn-sm btn-success px-3">Save</button>
+                        <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="document.getElementById('username-edit-container').classList.add('d-none'); document.getElementById('username-display').classList.remove('d-none'); document.getElementById('username-edit-icon').classList.remove('d-none');">Cancel</button>
                     </div>
 
                     {% if current_user.email == 'vipulyadav0709@gmail.com' %}
                     <div class="mb-2 mt-1">
-                        <span class="badge rounded-pill px-3 py-2"
-                            style="background: linear-gradient(135deg, #FFD700, #F7931A); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); border: 1px solid rgba(255,255,255,0.4); color: #000; display: inline-flex; align-items: center;">
-                            <i class="bi bi-patch-check-fill me-2" style="font-size: 1.1rem;"></i>
-                            <span class="fw-bold fs-6">Owner & Developer</span>
+                        <span class="badge rounded-pill px-3 py-1.5" style="background: linear-gradient(135deg, #FFD700, #F7931A); box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25); border: 1px solid rgba(255,255,255,0.3); color: #000; font-size: 0.75rem; font-weight: bold;">
+                            <i class="bi bi-patch-check-fill me-1"></i> Owner & Developer
                         </span>
                     </div>
                     {% endif %}
@@ -65,6 +54,7 @@
                         {% endfor %}
                     </div>
                     {% endif %}
+                    
                     {% if form.picture.errors %}
                     <div class="text-danger small mb-3">
                         {% for error in form.picture.errors %}
@@ -73,26 +63,23 @@
                     </div>
                     {% endif %}
 
-                    <!-- Removed email row entirely as it's not looking necessary or could be placed better -->
-                    <!-- In fact I will put it back but add counts underneath it -->
-                    <p class="text-muted">{{ current_user.email }}</p>
+                    <p class="text-muted small mb-3">{{ current_user.email }}</p>
 
-                    <div class="d-flex justify-content-center gap-4 mt-3">
+                    <!-- Stats Row -->
+                    <div class="d-flex justify-content-center gap-4 my-3 py-2 border-top border-bottom border-secondary border-opacity-10" style="max-width: 320px; margin: 0 auto;">
                         <div class="text-center">
-                            <strong class="d-block text-black">{{ current_user.posts|length }}</strong>
+                            <strong class="d-block text-white fs-5">{{ current_user.posts|length }}</strong>
                             <span class="text-muted small">Posts</span>
                         </div>
-                        <a href="{{ url_for('main.followers', username=current_user.username) }}"
-                            class="text-decoration-none" style="color: inherit;">
+                        <a href="{{ url_for('main.followers', username=current_user.username) }}" class="text-decoration-none" style="color: inherit;">
                             <div class="text-center">
-                                <strong class="d-block text-black">{{ current_user.followers.count() }}</strong>
+                                <strong class="d-block text-white fs-5">{{ current_user.followers.count() }}</strong>
                                 <span class="text-muted small">Followers</span>
                             </div>
                         </a>
-                        <a href="{{ url_for('main.following', username=current_user.username) }}"
-                            class="text-decoration-none" style="color: inherit;">
+                        <a href="{{ url_for('main.following', username=current_user.username) }}" class="text-decoration-none" style="color: inherit;">
                             <div class="text-center">
-                                <strong class="d-block text-black">{{ current_user.followed.count() }}</strong>
+                                <strong class="d-block text-white fs-5">{{ current_user.followed.count() }}</strong>
                                 <span class="text-muted small">Following</span>
                             </div>
                         </a>
@@ -100,26 +87,24 @@
                 </div>
             </form>
 
-            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                <a href="{{ url_for('main.create_post') }}" class="btn btn-auth px-4">New Post</a>
-                <a href="{{ url_for('main.logout_page') }}" class="btn btn-outline-secondary px-4">Logout</a>
+            <div class="d-flex justify-content-center gap-2 mt-3" style="max-width: 320px; margin: 0 auto;">
+                <a href="{{ url_for('main.create_post') }}" class="btn btn-sm btn-primary flex-grow-1"><i class="bi bi-pencil-square me-1"></i> New Post</a>
+                <a href="{{ url_for('main.logout_page') }}" class="btn btn-sm btn-outline-secondary px-3"><i class="bi bi-box-arrow-right"></i></a>
             </div>
         </div>
 
-        <!-- User's Specific Posts -->
-        
-        <!-- Tabs for Posts -->
-        <ul class="nav nav-pills mb-4 justify-content-center" id="profileTabs" role="tablist">
+        <!-- Stories Tabs -->
+        <ul class="nav nav-pills mb-4 justify-content-center gap-2" id="profileTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-4" id="published-tab" data-bs-toggle="tab" data-bs-target="#published" type="button" role="tab" aria-controls="published" aria-selected="true">My Stories</button>
+                <button class="nav-link active rounded-pill px-4" id="published-tab" data-bs-toggle="tab" data-bs-target="#published" type="button" role="tab" aria-controls="published" aria-selected="true"><i class="bi bi-journal-text me-1"></i> My Stories</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-4" id="saved-tab" data-bs-toggle="tab" data-bs-target="#saved" type="button" role="tab" aria-controls="saved" aria-selected="false">Saved</button>
+                <button class="nav-link rounded-pill px-4" id="saved-tab" data-bs-toggle="tab" data-bs-target="#saved" type="button" role="tab" aria-controls="saved" aria-selected="false"><i class="bi bi-bookmarks me-1"></i> Saved</button>
             </li>
         </ul>
 
-        <div class="tab-content" id="profileTabsContent">
-            <!-- Published Posts Tab -->
+        <div class="tab-content animate-fade-in" id="profileTabsContent">
+            <!-- Published Stories Tab -->
             <div class="tab-pane fade show active" id="published" role="tabpanel" aria-labelledby="published-tab">
                 {% if posts %}
                 {% for post in posts %}
@@ -127,13 +112,13 @@
                 {% endfor %}
                 {% else %}
                 <div class="glass-card text-center p-4">
-                    <p class="text-muted">You haven't written anything yet.</p>
+                    <p class="text-muted">You haven't written any stories yet.</p>
                     <a href="{{ url_for('main.create_post') }}" class="btn btn-sm btn-primary">Write your first story</a>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- Saved Posts Tab -->
+            <!-- Saved Stories Tab -->
             <div class="tab-pane fade" id="saved" role="tabpanel" aria-labelledby="saved-tab">
                 {% if saved_posts %}
                 {% for post in saved_posts %}
@@ -141,17 +126,16 @@
                 {% endfor %}
                 {% else %}
                 <div class="glass-card text-center p-4">
-                    <p class="text-muted">No saved posts yet.</p>
+                    <p class="text-muted">No saved stories yet.</p>
                     <a href="{{ url_for('main.main_page') }}" class="btn btn-sm btn-primary">Explore stories</a>
                 </div>
                 {% endif %}
             </div>
         </div>
-</div>
-</div>
+    </div>
 </div>
 
-<!-- Profile Picture Preview Modal -->
+<!-- Profile Picture Modal -->
 <div class="modal fade" id="profilePicModal" tabindex="-1" aria-labelledby="profilePicModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content bg-transparent border-0">

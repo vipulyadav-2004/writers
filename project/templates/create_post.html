@@ -2,15 +2,15 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-10 col-lg-8 mx-auto">
-        <h2 class="mb-4 gradient-text text-center">{{ legend }}</h2>
-        <div class="glass-card">
+    <div class="col-12">
+        <h3 class="mb-4 gradient-text text-center">{{ legend }}</h3>
+        <div class="glass-card mb-4" style="background: var(--bg-card); border: 1px solid var(--border-color);">
             <form method="POST" action="" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
 
+                <!-- Title Input -->
                 <div class="form-floating-custom">
-                    {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""),
-                    placeholder="e.g. -The Snail") }}
+                    {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Title of your story") }}
                     {{ form.title.label(class="form-label") }}
                     {% if form.title.errors %}
                     <div class="invalid-feedback">
@@ -21,9 +21,9 @@
                     {% endif %}
                 </div>
 
+                <!-- Attribution/Author Name -->
                 <div class="form-floating-custom">
-                    {{ form.author_name(class="form-control" + (" is-invalid" if form.author_name.errors else ""),
-                    placeholder="e.g. - Ruskin Bond ") }}
+                    {{ form.author_name(class="form-control" + (" is-invalid" if form.author_name.errors else ""), placeholder="Pen name or attribution") }}
                     {{ form.author_name.label(class="form-label") }}
                     {% if form.author_name.errors %}
                     <div class="invalid-feedback">
@@ -34,9 +34,9 @@
                     {% endif %}
                 </div>
 
+                <!-- Tags -->
                 <div class="form-floating-custom">
-                    {{ form.tags(class="form-control" + (" is-invalid" if form.tags.errors else ""),
-                    placeholder="e.g. poems, nature, fiction") }}
+                    {{ form.tags(class="form-control" + (" is-invalid" if form.tags.errors else ""), placeholder="e.g. poetry, fiction, life") }}
                     {{ form.tags.label(class="form-label") }}
                     {% if form.tags.errors %}
                     <div class="invalid-feedback">
@@ -47,9 +47,9 @@
                     {% endif %}
                 </div>
 
+                <!-- Story Body Textarea -->
                 <div class="form-floating-custom">
-                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""),
-                    placeholder="Write your content here...", style="height: 200px;", rows=10) }}
+                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), placeholder="Start writing...", style="height: 250px;", rows=12) }}
                     {{ form.body.label(class="form-label") }}
                     {% if form.body.errors %}
                     <div class="invalid-feedback">
@@ -57,25 +57,45 @@
                         <span>{{ error }}</span>
                         {% endfor %}
                     </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-        </div>
 
-        <div class="mb-3 mt-3">
-            {{ form.picture.label() }}
-            {{ form.picture(class="form-control-file") }}
-            {% if form.picture.errors %}
-            {% for error in form.picture.errors %}
-            <span class="text-danger">{{ error }}</span></br>
-            {% endfor %}
-            {% endif %}
-        </div>
+                <!-- Picture Attachment -->
+                <div class="mb-4">
+                    <label class="form-label text-white small fw-bold mb-2"><i class="bi bi-image me-1"></i> Attach Header Image (Optional):</label>
+                    <div class="p-3 rounded border text-center" style="border-style: dashed !important; border-color: var(--border-color) !important; background: rgba(0,0,0,0.15);">
+                        {{ form.picture(class="form-control d-none", id="post-picture-input", onchange="updateAttachName(this)") }}
+                        <label for="post-picture-input" class="btn btn-sm btn-secondary mb-2" style="cursor: pointer;">
+                            Choose Image file
+                        </label>
+                        <div id="upload-file-info" class="small text-muted">No file selected. Only PNG/JPG accepted.</div>
+                        {% if form.picture.errors %}
+                        {% for error in form.picture.errors %}
+                        <span class="text-danger d-block mt-1 small">{{ error }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
 
-        <div class="d-grid mt-4">
-            {{ form.submit(class="btn btn-auth btn-lg") }}
+                <!-- Submit Button -->
+                <div class="d-grid mt-4">
+                    {{ form.submit(class="btn btn-primary py-2.5") }}
+                </div>
+            </form>
         </div>
-        </form>
     </div>
 </div>
-</div>
+
+<script>
+    function updateAttachName(input) {
+        var display = document.getElementById('upload-file-info');
+        if (input.files && input.files[0]) {
+            display.innerText = 'Selected file: ' + input.files[0].name + ' (' + (input.files[0].size / 1024).toFixed(1) + ' KB)';
+            display.className = 'small text-success fw-bold';
+        } else {
+            display.innerText = 'No file selected. Only PNG/JPG accepted.';
+            display.className = 'small text-muted';
+        }
+    }
+</script>
 {% endblock %}
