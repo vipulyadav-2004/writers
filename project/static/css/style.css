@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
     /* Rich Color Palette */
@@ -609,6 +609,10 @@ h1, h2, h3, h4, h5, h6 {
     border-color: var(--primary-color);
 }
 
+.profile-avatar-wrapper:hover .profile-avatar-img {
+    border-color: var(--primary-color);
+}
+
 /* Ensure subtexts and muted text are visible on dark background */
 .text-muted, .text-muted-custom {
     color: var(--text-secondary) !important;
@@ -616,4 +620,114 @@ h1, h2, h3, h4, h5, h6 {
 
 .text-secondary {
     color: var(--text-secondary) !important;
+}
+
+/* Elegant Poetry & Prose Typography */
+.post-body-content {
+    font-family: 'Lora', Georgia, serif !important;
+    line-height: 1.8 !important;
+    letter-spacing: 0.015em !important;
+    font-size: 1.05rem !important;
+    color: #e2e8f0 !important;
+}
+
+/* Left Sidebar Navigation Polish */
+.sidebar-nav-link.active {
+    border-left: 3px solid var(--primary-color) !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    background-color: rgba(99, 102, 241, 0.08) !important;
+    color: var(--text-primary) !important;
+    padding-left: 1rem !important;
+}
+
+/* Profile Cover Banner */
+.profile-cover-banner {
+    height: 70px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    margin-top: -1.25rem;
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    margin-bottom: -35px;
+}
+
+/* Suggested Writers Widget */
+.suggested-writers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.suggested-writer-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.suggested-writer-item:last-child {
+    border-bottom: none;
+}
+
+/* Clean Button Interactions & Icon Buttons */
+.post-action-btn {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: var(--radius-sm) !important;
+    transition: var(--transition-smooth) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.post-action-btn:hover {
+    color: var(--primary-color) !important;
+    background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+.post-action-btn .badge {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.post-action-btn:hover .badge {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.post-action-btn i {
+    font-size: 1.1rem;
+}
+
+/* Card Subtle Elevation & Borders */
+.glass-card {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.glass-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 3-Dot Options Button */
+.btn-options-dot {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.25rem 0.5rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    border-radius: 50%;
+    transition: var(--transition-smooth);
+}
+.btn-options-dot:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
 }

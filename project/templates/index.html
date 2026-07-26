@@ -74,7 +74,6 @@
         {% else %}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="gradient-text mb-0">{{ title|default("Writer's Feed") }}</h3>
-            <a href="{{ url_for('main.create_post') }}" class="btn btn-sm btn-success d-flex align-items-center gap-2"><i class="bi bi-pencil-square"></i> Write Story</a>
         </div>
         {% endif %}
 
@@ -86,19 +85,37 @@
             <!-- Author Header Row -->
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="d-flex align-items-center">
-                    <img class="rounded-circle me-2 border border-secondary" src="{{ get_image_url(post.author.image_file, 'profile_pics') }}" alt="PFP" style="width: 32px; height: 32px; object-fit: cover;">
+                    <img class="rounded-circle me-2 border border-secondary" src="{{ get_image_url(post.author.image_file, 'profile_pics') }}" alt="PFP" style="width: 36px; height: 36px; object-fit: cover;">
                     <div style="line-height: 1.2;">
-                        <a href="{{ url_for('main.user_posts', username=post.author.username) }}" class="post-author-link text-decoration-none text-white small d-block"><strong>{{ post.author.username }}</strong></a>
+                        <a href="{{ url_for('main.user_posts', username=post.author.username) }}" class="post-author-link text-decoration-none text-white small d-block">
+                            <strong>{{ post.author.username }}</strong>
+                            <span class="text-muted fw-normal ms-1" style="font-size: 0.65rem;">@{{ post.author.username.lower() }}</span>
+                        </a>
                         <span class="text-muted" style="font-size: 0.7rem;">{{ post.timestamp.strftime('%B %d, %Y') }}</span>
                     </div>
                 </div>
                 
-                {% if not current_user.is_authenticated or (current_user != post.author and not current_user.is_following(post.author)) %}
-                <form action="{{ url_for('main.follow', username=post.author.username) }}" method="POST" class="m-0">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit" class="btn btn-sm btn-outline-primary py-0.5 px-2.5" style="font-size: 0.7rem; border-radius: 99px;">Follow</button>
-                </form>
-                {% endif %}
+                <div class="d-flex align-items-center gap-2">
+                    {% if not current_user.is_authenticated or (current_user != post.author and not current_user.is_following(post.author)) %}
+                    <form action="{{ url_for('main.follow', username=post.author.username) }}" method="POST" class="m-0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn btn-sm btn-outline-primary py-0.5 px-2.5" style="font-size: 0.7rem; border-radius: 99px;">Follow</button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if post.author == current_user or current_user.is_developer %}
+                    <div class="dropdown">
+                        <button class="btn-options-dot" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a href="{{ url_for('main.update_post', post_id=post.id) }}" class="dropdown-item"><i class="bi bi-pencil me-2"></i>Edit Post</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ post.id }}"><i class="bi bi-trash me-2"></i>Delete Post</button></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- Post Title -->
@@ -115,6 +132,29 @@
                     {{- post.body -}}</p>
             </div>
 
+            <!-- Tags & Attribution Placement -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2 mb-1">
+                <div>
+                    {% if post.tags %}
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for tag in post.tags.split(',') %}
+                        {% set tag = tag.strip() %}
+                        {% if tag %}
+                        <a href="{{ url_for('main.search', q=tag) }}" class="badge-tag">#{{ tag }}</a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if post.author_name %}
+                    <span class="badge bg-light text-dark py-1 px-2 border" style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">
+                        Attr: {{ post.author_name }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 pt-2 border-top border-secondary border-opacity-10">
                 <!-- Action Buttons Group -->
                 <div class="d-flex gap-2">
@@ -126,17 +166,17 @@
                         {% endif %}
                         <button type="submit" class="post-action-btn">
                             {% if user_liked %}
-                            <i class="bi bi-heart-fill"></i>
+                            <i class="bi bi-heart-fill text-danger"></i>
                             {% else %}
                             <i class="bi bi-heart"></i>
                             {% endif %}
-                            <span class="badge bg-secondary text-white">{{ post.likes.count() }}</span>
+                            <span class="badge">{{ post.likes.count() }}</span>
                         </button>
                     </form>
                     
                     <button class="post-action-btn" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
                         <i class="bi bi-chat-text"></i>
-                        <span class="badge bg-secondary text-white">{{ post.comments.count() }}</span>
+                        <span class="badge">{{ post.comments.count() }}</span>
                     </button>
                     
                     <form action="{{ url_for('main.save_post', post_id=post.id) }}" method="POST" class="d-inline">
@@ -147,7 +187,7 @@
                         {% endif %}
                         <button type="submit" class="post-action-btn">
                             {% if user_saved %}
-                            <i class="bi bi-bookmark-fill"></i>
+                            <i class="bi bi-bookmark-fill text-warning"></i>
                             {% else %}
                             <i class="bi bi-bookmark"></i>
                             {% endif %}
@@ -171,31 +211,6 @@
                             <li><a class="dropdown-item" href="https://api.whatsapp.com/send?text={{ post.title | urlencode }}%20{{ url_for('main.user_posts', username=post.author.username, _external=True) | urlencode }}%23post-{{ post.id }}" target="_blank"><i class="bi bi-whatsapp me-2" style="color: #25D366;"></i>WhatsApp</a></li>
                         </ul>
                     </div>
-                </div>
-
-                <!-- Tags / Attribution Group -->
-                <div class="d-flex align-items-center flex-wrap gap-2 text-end">
-                    {% if post.author == current_user or current_user.is_developer %}
-                    <a href="{{ url_for('main.update_post', post_id=post.id) }}" class="btn btn-sm btn-secondary py-1 px-2.5" style="font-size: 0.75rem;">Edit</a>
-                    <button type="button" class="btn btn-danger btn-sm py-1 px-2.5" data-bs-toggle="modal" data-bs-target="#deleteModal{{ post.id }}" style="font-size: 0.75rem;">Delete</button>
-                    {% endif %}
-
-                    {% if post.author_name %}
-                    <span class="badge bg-light text-dark py-1 px-2 border" style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">
-                        Attr: {{ post.author_name }}
-                    </span>
-                    {% endif %}
-                    
-                    {% if post.tags %}
-                    <div class="d-flex flex-wrap gap-1">
-                        {% for tag in post.tags.split(',') %}
-                        {% set tag = tag.strip() %}
-                        {% if tag %}
-                        <a href="{{ url_for('main.search', q=tag) }}" class="badge-tag">#{{ tag }}</a>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
 

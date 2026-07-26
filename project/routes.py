@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, abort, current_app, session
 from flask_login import login_user, logout_user, current_user, login_required
 from sqlalchemy import or_, and_
@@ -53,6 +54,34 @@ def inject_image_helper():
             return image_file
         return url_for('static', filename=f"{folder}/{image_file}")
     return dict(get_image_url=get_image_url)
+
+@main.app_context_processor
+def inject_sidebar_data():
+    # Dynamic Suggested Writers: show 3 users that current_user is not following
+    if current_user.is_authenticated:
+        followed_ids = [u.id for u in current_user.followed.all()]
+        if followed_ids:
+            suggested = User.query.filter(User.id != current_user.id, ~User.id.in_(followed_ids)).limit(3).all()
+        else:
+            suggested = User.query.filter(User.id != current_user.id).limit(3).all()
+    else:
+        suggested = User.query.limit(3).all()
+        
+    # Trending Hashtags count query
+    # E.g. we can count occurrences of posts containing each tag.
+    # For simplicity and speed, let's map counts:
+    trending_tags = [
+        {"name": "poetry", "count": Post.query.filter(Post.tags.like('%poetry%')).count()},
+        {"name": "fiction", "count": Post.query.filter(Post.tags.like('%fiction%')).count()},
+        {"name": "thoughts", "count": Post.query.filter(Post.tags.like('%thoughts%')).count()},
+        {"name": "stories", "count": Post.query.filter(Post.tags.like('%stories%')).count()},
+        {"name": "nature", "count": Post.query.filter(Post.tags.like('%nature%')).count()},
+        {"name": "life", "count": Post.query.filter(Post.tags.like('%life%')).count()},
+    ]
+    # Sort by count desc
+    trending_tags = sorted(trending_tags, key=lambda x: x["count"], reverse=True)
+    
+    return dict(suggested_writers=suggested, trending_tags=trending_tags)
 
 @main.errorhandler(CSRFError)
 def handle_csrf_error(e):
