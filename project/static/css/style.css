@@ -608,3 +608,12 @@ h1, h2, h3, h4, h5, h6 {
 .profile-avatar-wrapper:hover .profile-avatar-img {
     border-color: var(--primary-color);
 }
+
+/* Ensure subtexts and muted text are visible on dark background */
+.text-muted, .text-muted-custom {
+    color: var(--text-secondary) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
